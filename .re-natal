@@ -50,7 +50,15 @@
     "rn-snoopy/stream/filter",
     "rn-snoopy/stream/buffer",
     "react-native/Libraries/vendor/emitter/EventEmitter",
-    "react-native-background-timer"
+    "react-native-background-timer",
+    "react-native-threads"
+  ],
+  "worker-modules": [
+    "realm",
+    "react-native-fs",
+    "react-native",
+    "react-native-threads",
+    "chance"
   ],
   "imageDirs": [
     "resources/images"

@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import im.status.ethereum.function.Function;
+import com.reactlibrary.RNThreadPackage;
 
 public class MainApplication extends MultiDexApplication implements ReactApplication {
 
@@ -76,7 +77,8 @@ public class MainApplication extends MultiDexApplication implements ReactApplica
                     new ImageResizerPackage(),
                     new PickerPackage(),
                     new WebViewBridgePackage(BuildConfig.DEBUG, callRPC),
-                    new ReactNativeConfigPackage()
+                    new ReactNativeConfigPackage(),
+                    new RNThreadPackage(mReactNativeHost, new RNFSPackage())
                                                                                     ));
 
             if (!BuildConfig.DEBUG) {

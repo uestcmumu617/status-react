@@ -7,7 +7,8 @@
     "postinstall": "./postinstall.sh"
   },
   "devDependencies": {
-    "rn-nodeify": "8.2.0"
+    "rn-nodeify": "8.2.0",
+    "reactotron-react-native": "1.12.3"
   },
   "dependencies": {
     "assert": "1.4.1",
@@ -83,7 +84,8 @@
     "url": "0.10.3",
     "vm-browserify": "0.0.4",
     "web3": "github:status-im/web3.js#status-develop",
-    "rn-snoopy": "github:status-im/rn-snoopy"
+    "rn-snoopy": "github:status-im/rn-snoopy",
+    "react-native-threads": "0.0.10"
   },
   "browser": {
     "crypto": "react-native-crypto",

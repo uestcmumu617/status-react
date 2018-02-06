@@ -61,10 +61,13 @@ open -a /Applications/Genymotion.app/Contents/MacOS/player.app --args --vm-name 
 fi
 
 # Install deps, prepare for genymotion and figwheel
-lein deps && ./re-natal deps && ./re-natal use-android-device "${device_type}" && ./re-natal use-figwheel
+lein deps && npm install && ./re-natal use-android-device "${device_type}" && ./re-natal use-figwheel && npm install
+scripts/build-worker.js android "${device_type}"
 
 # open figwheel in new tab
 tab "lein figwheel-repl ${cljs_build}"
+
+tab "lein with-profile dev cljsbuild once worker"
 
 # open react-native package in new tab
 tab "react-native start"

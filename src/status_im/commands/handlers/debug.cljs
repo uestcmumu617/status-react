@@ -1,9 +1,9 @@
 (ns status-im.commands.handlers.debug
   (:require [re-frame.core :as re-frame]
             [status-im.ui.components.react :as react]
-            [status-im.commands.events.loading :as loading-events]
-            [status-im.data-store.accounts :as accounts]
+            [status-im.commands.events.loading :as loading-events] 
             [status-im.data-store.messages :as messages]
+            [status-im.data-store.accounts :as accounts]
             [status-im.utils.handlers :as handlers]
             [status-im.utils.platform :as platform]
             [status-im.utils.types :as types]
@@ -69,14 +69,14 @@
   [{:keys [chats]} {:keys [whisper-identity]}]
   (if (get chats whisper-identity)
     (if (get-in chats [whisper-identity :debug?])
-      (do (re-frame/dispatch [:remove-chat whisper-identity])
+      (do (re-frame/dispatch [:remove-chat-and-navigate-home whisper-identity])
           (respond {:type :ok
                     :text "The DApp or bot has been removed."}))
       (respond {:type :error
                 :text "Your DApp or bot should be debuggable."}))
     (respond {:type :error
-              :text "There is no such DApp or bot."}))
-  (re-frame/dispatch [:remove-contact whisper-identity #(and (:dapp? %) (:debug? %))]))
+              :text "There is no such DApp or bot."})) 
+  (re-frame/dispatch [:remove-contact whisper-identity]))
 
 (defn contact-changed
   [{:keys          [webview-bridge current-chat-id]

@@ -1,7 +1,6 @@
 (ns status-im.chat.events.receive-message
   (:require [re-frame.core :as re-frame]
             [taoensso.timbre :as log]
-            [status-im.data-store.messages :as messages-store]
             [status-im.chat.events.commands :as commands-events]
             [status-im.chat.models.message :as message-model]
             [status-im.constants :as constants]
@@ -15,7 +14,7 @@
   ::received-message
   message-model/receive-interceptors
   (fn [cofx [message]]
-    (message-model/receive cofx message)))
+    (message-model/receive message cofx)))
 
 (handlers/register-handler-fx
   :chat-received-message/add
@@ -40,7 +39,7 @@
                                                                        {:short-preview short-preview
                                                                         :preview       preview})])}])})
         ;; regular non command message, we can add it right away
-        (message-model/receive cofx message)))))
+        (message-model/receive message cofx)))))
 
 ;; TODO(alwx): refactor this when status-im.commands.handlers.jail is refactored
 (handlers/register-handler-fx

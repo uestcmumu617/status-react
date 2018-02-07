@@ -3,6 +3,7 @@
   (:require [cljs.spec.alpha :as spec]
             [status-im.constants :as constants]
             [status-im.utils.platform :as platform]
+            status-im.transport.db
             status-im.ui.screens.accounts.db
             status-im.ui.screens.contacts.db
             status-im.ui.screens.qr-scanner.db
@@ -46,6 +47,7 @@
              :inbox/topic                constants/inbox-topic
              :inbox/password             constants/inbox-password
              :my-profile/editing?        false
+             :transport/chats
              :desktop/desktop            {:tab-view-id :home}})
 
 ;;;;GLOBAL
@@ -168,6 +170,7 @@
                   :browser/options
                   :new/open-dapp
                   :navigation/screen-params
+                  :transport/chats
                   :desktop/desktop]
                  :opt-un
                  [::current-public-key

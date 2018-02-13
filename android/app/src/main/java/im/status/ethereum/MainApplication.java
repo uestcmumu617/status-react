@@ -17,6 +17,8 @@ import com.facebook.soloader.SoLoader;
 import com.github.alinz.reactnativewebviewbridge.WebViewBridgePackage;
 import com.AlexanderZaytsev.RNI18n.RNI18nPackage;
 import com.lwansbrough.RCTCamera.RCTCameraPackage;
+import com.instabug.reactlibrary.RNInstabugReactnativePackage;
+import com.oblador.vectoricons.VectorIconsPackage;
 import com.reactnative.ivpusic.imagepicker.PickerPackage;
 import com.rnfs.RNFSPackage;
 import es.tiarg.nfcreactnative.NfcReactNativePackage;
@@ -65,7 +67,13 @@ public class MainApplication extends MultiDexApplication implements ReactApplica
                     new RealmReactPackage(),
                     new RNI18nPackage(),
                     new RandomBytesPackage(),
+<<<<<<< HEAD
                     new RCTCameraPackage(),
+=======
+                    new LinearGradientPackage(),
+                    new RNCameraPackage(),
+                    new OrientationPackage(),
+>>>>>>> upgrade rn-camera (attempt to fix #3289)
                     new RNFSPackage(),
                     new ReactNativeDialogsPackage(),
                     new ImageResizerPackage(),

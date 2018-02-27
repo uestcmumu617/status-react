@@ -395,9 +395,8 @@
 
 (handlers/register-handler-fx
   :app-state-change
-  (fn [_ [_ state]]))
-;; TODO(rasom): let's not remove this handler, it will be used for
-;; pausing node on entering background on android
+  (fn [{:keys [db now]} [_ state]]
+    (log/info :app-state-change state)))
 
 (handlers/register-handler-fx
   :request-permissions

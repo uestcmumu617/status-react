@@ -159,11 +159,17 @@
                   :inbox/wnode
                   :inbox/wnodes
                   :inbox/topic
+                  :inbox/from
+                  :inbox/to
                   :inbox/password
+                  :app-state/state
+                  :app-state/active-timestamp
+                  :app-state/background-timestamp
                   :browser/browsers
                   :browser/options
                   :new/open-dapp
-                  :navigation/screen-params]
+                  :navigation/screen-params
+                  :network-status/offline-timestamp]
                  :opt-un
                  [::current-public-key
                   ::modal

@@ -394,9 +394,20 @@
     (when after-stop {:dispatch-n [after-stop]})))
 
 (handlers/register-handler-fx
-  :app-state-change
-  (fn [{:keys [db now]} [_ state]]
-    (log/info :app-state-change state)))
+ :app-state-change
+ (fn [{:keys [db now]} [_ new-state]]
+   (let [{:app-state/keys [state timestamp]} db
+         now-seconds  (long (subs (str now) 0 10))
+         diff-seconds (- now-seconds timestamp)
+         from         (- timestamp 60)
+         web3         (:web3 db)]
+     (log/info :app-state-change :from state :to new-state :diff diff-seconds)
+     (cond->
+      {:db (assoc db :app-state/state new-state
+                     :app-state/timestamp now-seconds)}
+
+      (and (= "active" new-state) (> diff-seconds 100))
+      (merge {:dispatch [:initialize-offline-inbox web3 from]})))))
 
 (handlers/register-handler-fx
   :request-permissions

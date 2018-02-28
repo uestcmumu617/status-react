@@ -155,7 +155,11 @@
                   :inbox/wnode
                   :inbox/wnodes
                   :inbox/topic
+                  :inbox/from
+                  :inbox/to
                   :inbox/password
+                  :app-state/state
+                  :app-state/timestamp
                   :browser/browsers
                   :browser/options
                   :new/open-dapp

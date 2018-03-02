@@ -441,8 +441,8 @@
               (fn [connected?]
                 (when connected?
                  (let [from' (datetime/minute-before from)]
-                   (re-frame.core [:initialize-offline-inbox web3 from' now-s])
-                   (re-frame.core [:set :app-state/background-timestamp now-s]))))})))))
+                   (re-frame/dispatch [:initialize-offline-inbox web3 from' now-s])
+                   (re-frame/dispatch [:set :app-state/background-timestamp now-s]))))})))))
 
 (handlers/register-handler-fx
   :request-permissions

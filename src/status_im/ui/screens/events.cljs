@@ -429,7 +429,7 @@
       {:db (cond-> (assoc db :app-state/state new-state)
 
                    (= :active new-state)
-                   (assoc :app-state/active-timestamp now-s)
+                   (assoc :app-state/active-timestamp (+ now-s 10))
 
                    (and online? (= :background new-state))
                    (assoc :app-state/background-timestamp now-s))}
@@ -441,8 +441,7 @@
               (fn [connected?]
                 (when connected?
                  (let [from' (datetime/minute-before from)]
-                   (re-frame/dispatch [:initialize-offline-inbox web3 from' now-s])
-                   (re-frame/dispatch [:set :app-state/background-timestamp now-s]))))})))))
+                   (re-frame/dispatch [:initialize-offline-inbox web3 from' now-s]))))})))))
 
 (handlers/register-handler-fx
   :request-permissions

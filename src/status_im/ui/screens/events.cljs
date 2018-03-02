@@ -437,9 +437,12 @@
       (and (= :active new-state)
            online?
            (> time-diff constants/history-requesting-threshold-seconds))
-      (merge {:dispatch
-              (let [from' (datetime/minute-before from)]
-                [:initialize-offline-inbox web3 from' now-s])})))))
+      (merge {:check-connection
+              (fn [connected?]
+                (when connected?
+                 (let [from' (datetime/minute-before from)]
+                   (re-frame.core [:initialize-offline-inbox web3 from' now-s])
+                   (re-frame.core [:set :app-state/background-timestamp now-s]))))})))))
 
 (handlers/register-handler-fx
   :request-permissions

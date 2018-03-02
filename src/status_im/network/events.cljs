@@ -20,6 +20,12 @@
   (fn [data]
     (status/connection-change data)))
 
+(re-frame/reg-fx
+  :check-connection
+  (fn [callback]
+    (net-info/is-connected? callback)))
+
+
 (handlers/register-handler-fx
  :listen-to-network-status
  (fn []

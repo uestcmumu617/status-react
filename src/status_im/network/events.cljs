@@ -25,7 +25,7 @@
   :check-connection-later
   (fn [{:keys [timeout callback]}]
     (utils/set-timeout
-     (net-info/is-connected? callback)
+     #(net-info/is-connected? callback)
      timeout)))
 
 

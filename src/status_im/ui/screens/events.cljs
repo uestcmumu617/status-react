@@ -437,11 +437,12 @@
       (and (= :active new-state)
            online?
            (> time-diff constants/history-requesting-threshold-seconds))
-      (merge {:check-connection
-              (fn [connected?]
-                (when connected?
-                 (let [from' (datetime/minute-before from)]
-                   (re-frame/dispatch [:initialize-offline-inbox web3 from' now-s]))))})))))
+      (merge {:check-connection-later
+              {:timeout  1000
+               :callback (fn [connected?]
+                           (when connected?
+                             (let [from' (datetime/minute-before from)]
+                               (re-frame/dispatch [:initialize-offline-inbox web3 from' now-s]))))}})))))
 
 (handlers/register-handler-fx
   :request-permissions

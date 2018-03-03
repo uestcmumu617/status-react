@@ -5,7 +5,8 @@
             [status-im.native-module.core :as status]
             [taoensso.timbre :as log]
             [status-im.constants :as constants]
-            [status-im.utils.datetime :as datetime]))
+            [status-im.utils.datetime :as datetime]
+            [status-im.utils.utils :as utils]))
 
 (re-frame/reg-fx
   ::listen-to-network-status
@@ -21,9 +22,11 @@
     (status/connection-change data)))
 
 (re-frame/reg-fx
-  :check-connection
-  (fn [callback]
-    (net-info/is-connected? callback)))
+  :check-connection-later
+  (fn [{:keys [timeout callback]}]
+    (utils/set-timeout
+     (net-info/is-connected? callback)
+     timeout)))
 
 
 (handlers/register-handler-fx

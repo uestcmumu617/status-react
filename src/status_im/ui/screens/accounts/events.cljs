@@ -164,8 +164,10 @@
         broadcast-fields [:name :photo-path :status
                           :updates-public-key :updates-private-key]]
     (cond-> fx
+
             true
             (assoc-in [:db :accounts/accounts current-account-id] new-account)
+
             true
             (assoc ::save-account new-account)
 
@@ -229,3 +231,8 @@
   :switch-dev-mode
   (fn [{db :db} [_ dev-mode]]
     (account-update {:db db} {:dev-mode? dev-mode})))
+
+(handlers/register-handler-fx
+  :wallet-set-up-passed
+  (fn [{db :db}]
+    (account-update {:db db} {:wallet-set-up-passed? true})))

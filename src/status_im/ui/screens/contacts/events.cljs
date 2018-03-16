@@ -170,16 +170,15 @@
 (defn- send-contact-request-confirmation [{:keys [whisper-identity] :as contact} {:keys [db] :as cofx}]
   (transport/send (transport-contact/map->ContactRequestConfirmed (own-info db)) whisper-identity cofx))
 
-(handlers/register-handler-fx
-  :add-new-contact-and-open-chat
-  (fn [{:keys [db] :as cofx} [_ {:keys [whisper-identity] :as contact}]]
-    (when-not (get-in db [:contacts/contacts whisper-identity])
-      (let [contact (assoc contact :address (public-key->address whisper-identity))]
-        (handlers/merge-fx cofx
-                           (navigation/navigate-to-clean :home)
-                           (add-new-contact contact)
-                           (chat.events/start-chat whisper-identity {:navigation-replace? true})
-                           (send-contact-request contact))))))
+(defn add-contact-and-open-chat
+  [{:keys [whisper-identity] :as contact} {:keys [db] :as cofx}]
+  (when-not (get-in db [:contacts/contacts whisper-identity])
+    (let [contact (assoc contact :address (public-key->address whisper-identity))]
+      (handlers/merge-fx cofx
+                         (navigation/navigate-to-clean :home)
+                         (add-new-contact contact)
+                         (chat.events/start-chat whisper-identity {:navigation-replace? true})
+                         (send-contact-request contact)))))
 
 (defn add-pending-contact [chat-or-whisper-id {:keys [db] :as cofx}]
   (let [{:keys [chats] :contacts/keys [contacts]} db
@@ -208,10 +207,12 @@
 (handlers/register-handler-fx
   :set-contact-identity-from-qr
   (fn [{{:accounts/keys [accounts current-account-id] :as db} :db} [_ _ contact-identity]]
-    (let [current-account (get accounts current-account-id)]
-      (cond-> {:db (assoc db :contacts/new-identity contact-identity)}
-        (not (new-chat.db/validate-pub-key contact-identity current-account))
-        (assoc :dispatch [:add-contact-handler])))))
+    (let [current-account (get accounts current-account-id)
+          fx              {:db (assoc db :contacts/new-identity contact-identity)}]
+      (if (new-chat.db/validate-pub-key contact-identity current-account)
+        fx
+        (handlers/merge-fx fx
+                           (add-contact-and-open-chat {:whisper-identity contact-identity}))))))
 
 (handlers/register-handler-fx
   :contact-update-received
@@ -293,6 +294,6 @@
 
 (handlers/register-handler-fx
   :add-contact-handler
-  (fn [{{:contacts/keys [new-identity] :as db} :db}]
+  (fn [{{:contacts/keys [new-identity] :as db} :db :as cofx}]
     (when (seq new-identity)
-      (add-contact-and-open-chat {:db db} new-identity))))
+      (add-contact-and-open-chat {:whisper-identity new-identity} cofx))))

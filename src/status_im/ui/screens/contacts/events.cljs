@@ -6,6 +6,9 @@
             [taoensso.timbre :as log]
             [cljs.reader :refer [read-string]]
             [status-im.utils.js-resources :as js-res]
+            [status-im.utils.datetime :as datetime]
+            [status-im.utils.identicon :as identicon]
+            [status-im.utils.gfycat.core :as gfycat.core]
             [status-im.react-native.js-dependencies :as rn-dependencies]
             [status-im.js-dependencies :as dependencies]
             [status-im.i18n :refer [label]]
@@ -19,8 +22,7 @@
             [status-im.transport.message.v1.contact :as transport-contact]
             [cljs.spec.alpha :as spec]
             [status-im.ui.screens.add-new.new-chat.db :as new-chat.db]
-            [clojure.string :as string]
-            [status-im.utils.datetime :as datetime]))
+            [clojure.string :as string]))
 ;;;; COFX
 
 (re-frame/reg-cofx
@@ -171,9 +173,12 @@
   (transport/send (transport-contact/map->ContactRequestConfirmed (own-info db)) whisper-identity cofx))
 
 (defn add-contact-and-open-chat
-  [{:keys [whisper-identity] :as contact} {:keys [db] :as cofx}]
+  [whisper-identity {:keys [db] :as cofx}]
   (when-not (get-in db [:contacts/contacts whisper-identity])
-    (let [contact (assoc contact :address (public-key->address whisper-identity))]
+    (let [contact {:whisper-identity whisper-identity
+                   :address          (public-key->address whisper-identity)
+                   :name             (gfycat.core/generate-gfy whisper-identity)
+                   :photo-path       (identicon/identicon whisper-identity)}]
       (handlers/merge-fx cofx
                          (navigation/navigate-to-clean :home)
                          (add-new-contact contact)
@@ -193,16 +198,8 @@
 
 (handlers/register-handler-fx
   :add-pending-contact
-  (fn [cofx [_ chat-or-whisper-id]]
-    (add-pending-contact chat-or-whisper-id cofx)))
-
-(handlers/register-handler-fx
-  :add-pending-contact-and-open-chat
   (fn [cofx [_ whisper-id]]
-    (handlers/merge-fx cofx
-                       (navigation/navigate-to-clean :home)
-                       (add-pending-contact whisper-id)
-                       (chat.events/start-chat whisper-id {:navigation-replace? true}))))
+    (add-pending-contact whisper-id cofx)))
 
 (handlers/register-handler-fx
   :set-contact-identity-from-qr
@@ -211,8 +208,7 @@
           fx              {:db (assoc db :contacts/new-identity contact-identity)}]
       (if (new-chat.db/validate-pub-key contact-identity current-account)
         fx
-        (handlers/merge-fx fx
-                           (add-contact-and-open-chat {:whisper-identity contact-identity}))))))
+        (handlers/merge-fx fx (add-contact-and-open-chat contact-identity))))))
 
 (handlers/register-handler-fx
   :contact-update-received
@@ -296,4 +292,4 @@
   :add-contact-handler
   (fn [{{:contacts/keys [new-identity] :as db} :db :as cofx}]
     (when (seq new-identity)
-      (add-contact-and-open-chat {:whisper-identity new-identity} cofx))))
+      (add-contact-and-open-chat new-identity cofx))))

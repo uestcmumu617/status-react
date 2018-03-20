@@ -22,8 +22,7 @@
      :is-active             true
      :timestamp             now
      :contacts              [{:identity chat-id}]
-     :last-to-clock-value   0
-     :last-from-clock-value 0}))
+     :last-clock-value 0}))
 
 (defn add-chat
   "Adds new chat to db & realm, if the chat with same id already exists, justs restores it"

@@ -164,7 +164,7 @@
                               [:read-external-storage]
                               #(move-to-internal-storage config)
                               #()])
-          #_(status/start-node config))))))
+          (status/start-node config))))))
 
 (re-frame/reg-fx
   ::status-module-initialized-fx

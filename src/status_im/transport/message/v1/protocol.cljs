@@ -1,5 +1,6 @@
 (ns status-im.transport.message.v1.protocol
   (:require [status-im.utils.config :as config]
+            [status-im.constants :as constants]
             [status-im.transport.message-cache :as message-cache]
             [status-im.transport.db :as transport.db]
             [status-im.transport.core :as transport]
@@ -11,8 +12,11 @@
    :powTarget config/pow-target
    :powTime   config/pow-time})
 
-(defn init-chat [chat-id {:keys [db] :as cofx}]
-  {:db (assoc-in db [:transport/chats chat-id] (transport.db/create-chat (transport.utils/get-topic chat-id)))})
+(defn init-chat
+  ([chat-id cofx]
+   (init-chat chat-id (transport.utils/get-topic chat-id) cofx))
+  ([chat-id topic {:keys [db] :as cofx}]
+   {:db (assoc-in db [:transport/chats chat-id] (transport.db/create-chat topic))}))
 
 (defn is-new? [message-id]
   (when-not (message-cache/exists? message-id)
@@ -30,32 +34,31 @@
         {:keys [sym-key-id topic]} (get-in db [:transport/chats chat-id])]
     {:shh/post {:web3 web3
                 :success-event success-event
-                :message (merge {:sig current-public-key
+                :message (merge {:sig      current-public-key
                                  :symKeyID sym-key-id
-                                 :payload payload
-                                 :topic topic}
+                                 :payload  payload
+                                 :topic    topic}
                                 whisper-opts)}}))
 
 (defn send-with-pubkey [{:keys [payload chat-id success-event]} {:keys [db] :as cofx}]
-  (let [{:keys [current-public-key web3]} db
-        {:keys [topic]} (get-in db [:transport/chats chat-id])]
+  (let [{:keys [current-public-key web3]} db]
     {:shh/post {:web3 web3
                 :success-event success-event
-                :message (merge {:sig current-public-key
-                                 :pubKey chat-id
-                                 :payload  payload
-                                 :topic topic}
+                :message (merge {:sig     current-public-key
+                                 :pubKey  chat-id
+                                 :payload payload
+                                 :topic   (transport.utils/get-topic constants/contact-discovery)}
                                 whisper-opts)}}))
 
 (defn multi-send-with-pubkey [{:keys [payload chat-id public-keys success-event]} {:keys [db] :as cofx}]
   (let [{:keys [current-public-key web3]} db
         {:keys [topic]} (get-in db [:transport/chats chat-id])]
-    {:shh/multi-post {:web3    web3
+    {:shh/multi-post {:web3 web3
                       :success-event success-event
                       :public-keys public-keys
-                      :message (merge {:sig current-public-key
-                                       :payload  payload
-                                       :topic topic}
+                      :message (merge {:sig     current-public-key
+                                       :payload payload
+                                       :topic   topic}
                                       whisper-opts)}}))
 
 (defrecord Ack [message-ids]

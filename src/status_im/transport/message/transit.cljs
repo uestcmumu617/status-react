@@ -7,8 +7,8 @@
 (deftype NewContactKeyHandler []
   Object
   (tag [this v] "c1")
-  (rep [this {:keys [sym-key message]}]
-    #js [sym-key message]))
+  (rep [this {:keys [sym-key topic message]}]
+    #js [sym-key topic message]))
 
 (deftype ContactRequestHandler []
   Object
@@ -54,8 +54,8 @@
 
 (def reader (transit/reader :json
                             {:handlers
-                             {"c1" (fn [[sym-key message]]
-                                     (v1.contact/NewContactKey. sym-key message))
+                             {"c1" (fn [[sym-key topic message]]
+                                     (v1.contact/NewContactKey. sym-key topic message))
                               "c2" (fn [[name profile-image address fcm-token]]
                                      (v1.contact/ContactRequest. name profile-image address fcm-token))
                               "c3" (fn [[name profile-image address fcm-token]]

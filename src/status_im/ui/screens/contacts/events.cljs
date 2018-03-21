@@ -180,12 +180,13 @@
 
 (handlers/register-handler-fx
   :add-contact
+  [(re-frame/inject-cofx :random-id)]
   (fn [cofx [_ whisper-id]]
     (add-contact whisper-id cofx)))
 
 (handlers/register-handler-fx
   :set-contact-identity-from-qr
-  [(re-frame/inject-cofx :get-stored-chat)]
+  [(re-frame/inject-cofx :random-id) (re-frame/inject-cofx :get-stored-chat)]
   (fn [{{:accounts/keys [accounts current-account-id] :as db} :db} [_ _ contact-identity]]
     (let [current-account (get accounts current-account-id)
           fx              {:db (assoc db :contacts/new-identity contact-identity)}]
@@ -250,6 +251,7 @@
 
 (handlers/register-handler-fx
   :open-chat-with-contact
+  [(re-frame/inject-cofx :random-id)]
   (fn [{:keys [db] :as cofx} [_ {:keys [whisper-identity] :as contact}]]
     (handlers/merge-fx cofx
                        (navigation/navigate-to-clean :home)
@@ -258,7 +260,7 @@
 
 (handlers/register-handler-fx
   :add-contact-handler
-  [(re-frame/inject-cofx :get-stored-chat)]
+  [(re-frame/inject-cofx :random-id) (re-frame/inject-cofx :get-stored-chat)]
   (fn [{{:contacts/keys [new-identity] :as db} :db :as cofx} _]
     (when (seq new-identity)
       (add-contact-and-open-chat new-identity cofx))))

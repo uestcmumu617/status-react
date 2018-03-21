@@ -5,7 +5,7 @@
             [status-im.transport.message.v1.protocol :as protocol]
             [status-im.transport.utils :as transport.utils]))
 
-(defrecord NewContactKey [sym-key message]
+(defrecord NewContactKey [sym-key topic message]
   message/StatusMessage
   (send [this chat-id cofx]
     (protocol/send-with-pubkey {:chat-id chat-id
@@ -19,21 +19,24 @@
                                                             (re-frame/dispatch [::add-new-sym-key {:sym-key-id sym-key-id
                                                                                                    :sym-key    sym-key
                                                                                                    :chat-id    chat-id
+                                                                                                   :topic      topic
                                                                                                    :message    message}]))}}
-                       (protocol/init-chat chat-id))))
+                       (protocol/init-chat chat-id topic))))
 
 (defrecord ContactRequest [name profile-image address fcm-token]
   message/StatusMessage
-  (send [this chat-id cofx]
-    (let [message-id (transport.utils/message-id this)]
+  (send [this chat-id {:keys [db random-id] :as cofx}]
+    (let [message-id (transport.utils/message-id this)
+          topic      (transport.utils/get-topic random-id)]
       (handlers/merge-fx cofx
-                         {:shh/get-new-sym-key {:web3 (get-in cofx [:db :web3])
+                         {:shh/get-new-sym-key {:web3 (:web3 db)
                                                 :on-success (fn [sym-key sym-key-id]
                                                               (re-frame/dispatch [::send-new-sym-key {:sym-key-id sym-key-id
                                                                                                       :sym-key    sym-key
                                                                                                       :chat-id    chat-id
+                                                                                                      :topic      topic
                                                                                                       :message    this}]))}}
-                         (protocol/init-chat chat-id)
+                         (protocol/init-chat chat-id topic)
                          (protocol/requires-ack message-id chat-id))))
   (receive [this chat-id signature {:keys [db] :as cofx}]
     (let [message-id (transport.utils/message-id this)]
@@ -61,37 +64,37 @@
 
 (handlers/register-handler-fx
   ::send-new-sym-key
-  (fn [{:keys [db] :as cofx} [_ {:keys [chat-id message sym-key sym-key-id]}]]
+  (fn [{:keys [db random-id] :as cofx} [_ {:keys [chat-id topic message sym-key sym-key-id]}]]
     (let [{:keys [web3 current-public-key]} db]
       (handlers/merge-fx cofx
                          {:db (assoc-in db [:transport/chats chat-id :sym-key-id] sym-key-id)
-                          :shh/add-filter {:web3 web3
+                          :shh/add-filter {:web3       web3
                                            :sym-key-id sym-key-id
-                                           :topic (transport.utils/get-topic current-public-key)
-                                           :chat-id chat-id}
+                                           :topic      topic
+                                           :chat-id    chat-id}
                           :data-store.transport/save {:chat-id chat-id
-                                                      :chat (-> (get-in db [:transport/chats chat-id])
-                                                                (assoc :sym-key-id sym-key-id)
-                                                                ;;TODO (yenda) remove once go implements persistence
-                                                                (assoc :sym-key sym-key))}}
-                         (message/send (NewContactKey. sym-key message)
+                                                      :chat    (-> (get-in db [:transport/chats chat-id])
+                                                                   (assoc :sym-key-id sym-key-id)
+                                                                   ;;TODO (yenda) remove once go implements persistence
+                                                                   (assoc :sym-key sym-key))}}
+                         (message/send (NewContactKey. sym-key topic message)
                                        chat-id)))))
 
 (handlers/register-handler-fx
   ::add-new-sym-key
-  (fn [{:keys [db] :as cofx} [_ {:keys [sym-key-id sym-key chat-id message]}]]
+  (fn [{:keys [db] :as cofx} [_ {:keys [sym-key-id sym-key chat-id topic message]}]]
     (let [{:keys [web3 current-public-key]} db]
       (handlers/merge-fx cofx
                          {:db (assoc-in db [:transport/chats chat-id :sym-key-id] sym-key-id)
-                          :shh/add-filter {:web3 web3
+                          :shh/add-filter {:web3       web3
                                            :sym-key-id sym-key-id
-                                           :topic (transport.utils/get-topic current-public-key)
-                                           :chat-id chat-id}
+                                           :topic      topic
+                                           :chat-id    chat-id}
                           :data-store.transport/save {:chat-id chat-id
-                                                      :chat (-> (get-in db [:transport/chats chat-id])
-                                                                (assoc :sym-key-id sym-key-id)
-                                                                ;;TODO (yenda) remove once go implements persistence
-                                                                (assoc :sym-key sym-key))}}
+                                                      :chat    (-> (get-in db [:transport/chats chat-id])
+                                                                   (assoc :sym-key-id sym-key-id)
+                                                                   ;;TODO (yenda) remove once go implements persistence
+                                                                   (assoc :sym-key sym-key))}}
                          (message/receive message chat-id chat-id)))))
 
 (handlers/register-handler-fx

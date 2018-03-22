@@ -67,7 +67,7 @@
 (re-frame/reg-fx
   :shh/post
   (fn [{:keys [web3 message success-event error-event]
-        :or {error-event   :protocol/send-status-message-error}}]
+        :or {error-event :protocol/send-status-message-error}}]
     (post-message {:web3       web3
                    :whisper-message (update message :payload (comp transport.utils/from-utf8
                                                                    transit/serialize))
@@ -79,9 +79,9 @@
 (re-frame/reg-fx
   :shh/multi-post
   (fn [{:keys [web3 message public-keys success-event error-event]
-        :or {error-event   :protocol/send-status-message-error}}]
+        :or {error-event :protocol/send-status-message-error}}]
     (let [whisper-message (update message :payload (comp transport.utils/from-utf8
-                                                         transit/serialize))]
+                                                         transit/serialize))] 
       (doseq [public-key public-keys]
         (post-message {:web3            web3
                        :whisper-message (assoc whisper-message :pubKey public-key)

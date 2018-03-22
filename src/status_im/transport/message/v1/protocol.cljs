@@ -58,7 +58,7 @@
                       :public-keys public-keys
                       :message (merge {:sig     current-public-key
                                        :payload payload
-                                       :topic   topic}
+                                       :topic   (transport.utils/get-topic constants/contact-discovery)}
                                       whisper-opts)}}))
 
 (defrecord Ack [message-ids]

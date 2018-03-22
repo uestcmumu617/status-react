@@ -16,7 +16,7 @@
 (defrecord NewGroupKey [chat-id sym-key message]
   message/StatusMessage
   (send [this _ cofx]
-    (let [public-keys (mapv :identities (get-in cofx [:db :chats chat-id :contacts]))]
+    (let [public-keys (map :identity (get-in cofx [:db :chats chat-id :contacts]))]
       (protocol/multi-send-with-pubkey {:public-keys public-keys
                                         :chat-id     chat-id
                                         :payload     this}

@@ -48,14 +48,6 @@
                                                (on-success resp)
                                                (on-error err))))))
 
-(re-frame/reg-fx
-  :shh/generate-sym-key-from-password
-  (fn [{:keys [web3 password on-success on-error]}]
-    (generate-sym-key-from-password {:web3       web3
-                                     :password   password
-                                     :on-success on-success
-                                     :on-error   on-error})))
-
 (defn post-message
   [{:keys [web3 whisper-message on-success on-error]}]
   (.. web3
@@ -73,7 +65,7 @@
                                                                    transit/serialize))
                    :on-success (if success-event
                                  #(re-frame/dispatch success-event)
-                                 #(log/debug :ssh/post-success))
+                                 #(log/debug :shh/post-success))
                    :on-error   #(re-frame/dispatch [error-event %])})))
 
 (re-frame/reg-fx
@@ -81,13 +73,13 @@
   (fn [{:keys [web3 message public-keys success-event error-event]
         :or {error-event :protocol/send-status-message-error}}]
     (let [whisper-message (update message :payload (comp transport.utils/from-utf8
-                                                         transit/serialize))] 
+                                                         transit/serialize))]
       (doseq [public-key public-keys]
         (post-message {:web3            web3
                        :whisper-message (assoc whisper-message :pubKey public-key)
                        :on-success      (if success-event
                                           #(re-frame/dispatch success-event)
-                                          #(log/debug :ssh/post-success))
+                                          #(log/debug :shh/post-success))
                        :on-error        #(re-frame/dispatch [error-event %])})))))
 
 (defn add-sym-key
@@ -153,7 +145,6 @@
                                               :on-error log-error}))
                   :on-error log-error})))
 
-;; public-chat
 (re-frame/reg-fx
   :shh/generate-sym-key-from-password
   (fn [{:keys [web3 password on-success]}]

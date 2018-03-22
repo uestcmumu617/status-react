@@ -58,8 +58,8 @@
                     enode
                     (fn [err resp]
                       (if-not err
-                        (error-fn resp)
-                        (success-fn err)))))
+                        (success-fn resp)
+                        (error-fn err)))))
 
 (defn request-messages [web3 wnode topic to from sym-key-id success-fn error-fn]
   (log/info "offline inbox: sym-key-id" sym-key-id)
@@ -74,8 +74,8 @@
                       (clj->js opts)
                       (fn [err resp]
                         (if-not err
-                          (error-fn resp)
-                          (success-fn err))))))
+                          (success-fn resp)
+                          (error-fn err))))))
 
 (re-frame/reg-fx
   ::add-peer
@@ -97,7 +97,7 @@
                        wnode
                        peers
                        #(re-frame/dispatch [::get-sym-key %])
-                       #(log/error "offline inbox: mark-trusted-peer error" %))))
+                       #(log/error "offline inbox: mark-trusted-peer error" % wnode))))
 
 (re-frame/reg-fx
   ::request-messages
@@ -109,7 +109,7 @@
                       from
                       sym-key-id
                       #(log/info "offline inbox: request-messages response" %)
-                      #(log/error "offline inbox: request-messages error" %))))
+                      #(log/error "offline inbox: request-messages error" % topic to from))))
 
 ;;;; Handlers
 
@@ -142,6 +142,7 @@
       (log/info "offline inbox: fetch-peers response" peers)
       (if (registered-peer? peers wnode)
         {::mark-trusted-peer {:web3  web3
+                              :wnode wnode
                               :peers peers}}
         (do
           (log/info "Peer" wnode "is not registered. Retrying fetch peers.")

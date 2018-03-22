@@ -61,21 +61,22 @@
                         (success-fn resp)
                         (error-fn err)))))
 
-(defn request-messages [web3 wnode topic to from sym-key-id success-fn error-fn]
+(defn request-messages [web3 wnode topics to from sym-key-id success-fn error-fn]
   (log/info "offline inbox: sym-key-id" sym-key-id)
   (let [opts (merge {:mailServerPeer wnode
-                     :topic          topic
                      :symKeyID       sym-key-id}
                     (when from {:from from})
                     (when to {:to to}))]
     (log/info "offline inbox: request-messages request")
-    (log/info "offline inbox: request-messages args" (pr-str opts))
-    (.requestMessages (web3.utils/shh web3)
-                      (clj->js opts)
-                      (fn [err resp]
-                        (if-not err
-                          (success-fn resp)
-                          (error-fn err))))))
+    (doseq [topic topics]
+      (let [opts (assoc opts :topic topic)]
+        (log/info "offline inbox: request-messages args" (pr-str opts))
+        (.requestMessages (web3.utils/shh web3)
+                          (clj->js opts)
+                          (fn [err resp]
+                            (if-not err
+                              (success-fn resp)
+                              (error-fn err))))))))
 
 (re-frame/reg-fx
   ::add-peer
@@ -179,11 +180,11 @@
     (let [web3 (:web3 db)
           wnode-id (get db :inbox/wnode)
           wnode    (get-in db [:inbox/wnodes wnode-id :address])
-          topic    (:inbox/topic db)
+          topics   (map #(:topic %2) (:transport/chats db))
           to       nil
           from     nil]
       {::request-messages {:wnode      wnode
-                           :topic      topic
+                           :topics     topics
                            :to         to
                            :from       from
                            :sym-key-id sym-key-id

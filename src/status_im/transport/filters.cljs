@@ -1,5 +1,6 @@
 (ns status-im.transport.filters
-  (:require [status-im.transport.utils :as utils] 
+  (:require [status-im.transport.utils :as utils]
+            [status-im.utils.config :as config]
             [re-frame.core :as re-frame]
             [taoensso.timbre :as log]))
 
@@ -23,9 +24,12 @@
 
 (defn add-filter!
   [web3 {:keys [topics to] :as options} callback]
-  (remove-filter! web3 options)
-  (log/debug :add-filter options)
-  (add-shh-filter! web3 options callback))
+  (let [options  (if config/offline-inbox-enabled?
+                   (assoc options :allowP2P true)
+                   options)]
+    (remove-filter! web3 options)
+    (log/debug :add-filter options)
+    (add-shh-filter! web3 options callback)))
 
 (defn remove-all-filters! []
   (doseq [[web3 filters] @filters]

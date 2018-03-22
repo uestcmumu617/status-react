@@ -15,11 +15,10 @@
 (defn init-whisper!
   [{:keys [web3 identity transport]}]
   (log/debug :init-whisper)
-  (let [filter-opts (cond-> {:privateKeyID identity
-                             :topics [(transport.utils/get-topic constants/contact-discovery)]}
-                      config/offline-inbox-enabled?
-                      (assoc :allowP2P true))]
-    (filters/add-filter! web3 filter-opts
+  (let [filter-opts {:privateKeyID identity
+                     :topics [(transport.utils/get-topic constants/contact-discovery)]}]
+    (filters/add-filter! web3
+                         filter-opts
                          (fn [js-error js-message]
                            (re-frame/dispatch [:protocol/receive-whisper-message js-error js-message])))
     (when config/offline-inbox-enabled?

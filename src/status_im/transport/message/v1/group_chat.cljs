@@ -150,7 +150,7 @@
                          {:db (assoc-in db [:transport/chats chat-id :sym-key-id] sym-key-id)
                           :shh/add-filter {:web3 web3
                                            :sym-key-id sym-key-id
-                                           :topic (transport.utils/get-topic current-public-key)
+                                           :topic (transport.utils/get-topic chat-id)
                                            :chat-id chat-id}
                           :data-store.transport/save {:chat-id chat-id
                                                       :chat (-> (get-in db [:transport/chats chat-id])

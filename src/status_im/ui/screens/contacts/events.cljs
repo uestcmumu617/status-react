@@ -240,14 +240,14 @@
       {:db             (update db :contacts/contacts dissoc whisper-identity)
        :delete-contact contact})))
 
-(handlers/register-handler-fx
+(handlers/register-handler-db
   :open-contact-toggle-list
-  (fn [{:keys [db]} [_ group-type]]
-    {:db       (-> db
-                   (assoc :group/group-type group-type
-                          :group/selected-contacts #{}
-                          :new-chat-name "")
-                   (navigation/navigate-to :contact-toggle-list))}))
+  (fn [db [_ group-type]]
+    (-> (assoc db
+               :group/group-type group-type
+               :group/selected-contacts #{}
+               :new-chat-name "")
+        (navigation/navigate-to :contact-toggle-list))))
 
 (handlers/register-handler-fx
   :open-chat-with-contact

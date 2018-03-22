@@ -15,16 +15,18 @@
                  (pop stack))]
     (conj stack' view-id)))
 
-(defn replace-view [db view-id]
-  (-> db
-      (update :navigation-stack replace-top-element view-id)
-      (assoc :view-id view-id)))
-
 ;; public fns
+
+(defn replace-view [view-id {:keys [db]}]
+  {:db (-> (update db :navigation-stack replace-top-element view-id)
+           (assoc :view-id view-id))})
 
 (defn navigate-to-clean [view-id {:keys [db]}]
   {:db (-> (assoc db :navigation-stack (list))
            (push-view view-id))})
+
+(defn navigate-forget [view-id {:keys [db]}]
+  {:db (assoc db :view-id view-id)})
 
 (defmulti preload-data!
   (fn [db [_ view-id]] (or view-id (:view-id db))))
@@ -51,12 +53,6 @@
 ;; event handlers
 
 (handlers/register-handler-db
-  :navigate-forget
-  (re-frame/enrich preload-data!)
-  (fn [db [_ new-view-id]]
-    (assoc db :view-id new-view-id)))
-
-(handlers/register-handler-db
   :navigate-to
   (re-frame/enrich preload-data!)
   (fn [db [_ & params]]
@@ -68,11 +64,11 @@
   (fn [db [_ modal-view]]
     (assoc db :modal modal-view)))
 
-(handlers/register-handler-db
+(handlers/register-handler-fx
   :navigation-replace
   (re-frame/enrich preload-data!)
-  (fn [db [_ view-id]]
-    (replace-view db view-id)))
+  (fn [cofx [_ view-id]]
+    (replace-view view-id cofx)))
 
 (handlers/register-handler-db
   :navigate-back

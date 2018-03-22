@@ -1,6 +1,5 @@
 (ns status-im.transport.filters
-  (:require [status-im.transport.utils :as utils]
-            [status-im.utils.config :as config]
+  (:require [status-im.transport.utils :as utils] 
             [re-frame.core :as re-frame]
             [taoensso.timbre :as log]))
 

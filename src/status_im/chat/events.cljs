@@ -1,5 +1,6 @@
 (ns status-im.chat.events
   (:require [clojure.set :as set]
+            [clojure.string :as string]
             [re-frame.core :as re-frame]
             [status-im.constants :as constants]
             [status-im.i18n :as i18n]
@@ -13,6 +14,7 @@
             [status-im.transport.message.core :as transport]
             [status-im.transport.message.v1.protocol :as protocol]
             [status-im.transport.message.v1.public-chat :as public-chat]
+            [status-im.transport.message.v1.group-chat :as group-chat]
             status-im.chat.events.commands
             status-im.chat.events.requests
             status-im.chat.events.send-message
@@ -207,11 +209,13 @@
 (defn- navigate-to-chat
   "Takes coeffects map and chat-id, returns effects necessary for navigation and preloading data"
   [chat-id {:keys [navigation-replace?]} {:keys [db] :as cofx}]
-  (let [nav-fn (if navigation-replace?
-                 #(navigation/replace-view % :chat)
-                 #(navigation/navigate-to % :chat))]
+  (if navigation-replace?
     (handlers/merge-fx cofx
-                       {:db (nav-fn db)}
+                       (navigation/replace-view :chat)
+                       (preload-chat-data chat-id))
+    (handlers/merge-fx cofx
+                       ;; TODO janherich - refactor `navigate-to` so it can be used with `merge-fx` macro
+                       {:db (navigation/navigate-to db :chat)}
                        (preload-chat-data chat-id))))
 
 (handlers/register-handler-fx
@@ -251,8 +255,9 @@
   :remove-chat-and-navigate-home
   [re-frame/trim-v]
   (fn [cofx [chat-id]]
-    (-> (models/remove-chat chat-id cofx)
-        (update :db navigation/replace-view :home))))
+    (handlers/merge-fx cofx
+                       (models/remove-chat chat-id)
+                       (navigation/replace-view :home))))
 
 (handlers/register-handler-fx
   :remove-chat-and-navigate-home?
@@ -270,7 +275,7 @@
     (if (get-in db [:chats topic])
       (handlers/merge-fx cofx
                          (navigation/navigate-to-clean :home)
-                         (navigate-to-chat topic {:navigation-replace? true}))
+                         (navigate-to-chat topic {}))
       (let [chat {:chat-id               topic
                   :name                  topic
                   :color                 components.styles/default-chat-color
@@ -283,5 +288,68 @@
         (handlers/merge-fx {:db        (assoc-in db [:chats topic] chat)
                             :save-chat chat}
                            (navigation/navigate-to-clean :home)
-                           (navigate-to-chat topic {:navigation-replace? true})
+                           (navigate-to-chat topic {})
                            (public-chat/join-public-chat topic))))))
+
+(defn- group-name-from-contacts [selected-contacts all-contacts username]
+  (->> selected-contacts
+       (map (comp :name (partial get all-contacts)))
+       (cons username)
+       (string/join ", ")))
+
+(handlers/register-handler-fx
+  :create-new-group-chat-and-open
+  [re-frame/trim-v (re-frame/inject-cofx :random-id)]
+  (fn [{:keys [db now random-id] :as cofx} [group-name]]
+    (let [selected-contacts (:group/selected-contacts db)
+          chat              {:chat-id               random-id
+                             :name                  (if-not (string/blank? group-name)
+                                                      group-name
+                                                      (group-name-from-contacts selected-contacts
+                                                                                (:contacts/contacts db)
+                                                                                (:username db)))
+                             :color                 components.styles/default-chat-color
+                             :group-chat            true
+                             :group-admin           (:current-public-key db)
+                             :is-active             true
+                             :timestamp             now
+                             :contacts              (mapv (partial hash-map :identity) selected-contacts)
+                             :last-to-clock-value   0
+                             :last-from-clock-value 0}]
+      (handlers/merge-fx cofx
+                         {:db (-> db
+                                  (assoc-in [:chats random-id] chat)
+                                  (assoc :group/selected-contacts #{}))
+                          :save-chat chat}
+                         (navigation/navigate-to-clean :home)
+                         (navigate-to-chat random-id {})
+                         (transport/send (group-chat/GroupAdminUpdate. selected-contacts) random-id)))))
+
+(defn- broadcast-leave [{:keys [public? chat-id]} cofx]
+  (when public?
+    (transport/send (group-chat/GroupLeave.) chat-id cofx)))
+
+(handlers/register-handler
+  :leave-group-chat
+  ;; stop listening to group here
+  (fn [{{:keys [current-chat-id chats] :as db} :db :as cofx} _]
+    (handlers/merge-fx cofx
+                       (models/remove-chat current-chat-id)
+                       (navigation/replace-view :home)
+                       (broadcast-leave (chats current-chat-id)))))
+
+(handlers/register-handler-fx
+  :leave-group-chat?
+  (fn [_ _]
+    {:show-confirmation {:title               (i18n/label :t/leave-confirmation)
+                         :content             (i18n/label :t/leave-group-chat-confirmation)
+                         :confirm-button-text (i18n/label :t/leave)
+                         :on-accept           #(re-frame/dispatch [:leave-group-chat])}}))
+
+(handlers/register-handler-fx
+  :show-profile
+  [re-frame/trim-v]
+  (fn [{:keys [db] :as cofx} [identity]]
+    (handlers/merge-fx cofx
+                       {:db (assoc db :contacts/identity identity)}
+                       (navigation/navigate-forget :profile))))

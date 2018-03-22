@@ -27,6 +27,8 @@
 
 (def default-network "testnet_rpc")
 
+(def system "system")
+
 (def default-wallet-transactions
   {:filters
    {:type [{:id :inbound   :label (i18n/label :t/incoming)  :checked? true}

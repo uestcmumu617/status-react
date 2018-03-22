@@ -37,3 +37,8 @@
   :data-store.transport/save
   (fn [{:keys [chat-id chat]}]
     (async/go (async/>! core/realm-queue #(save chat-id chat)))))
+
+(re-frame/reg-fx
+  :data-store.transport/delete
+  (fn [chat-id]
+    (async/go (async/>! core/realm-queue #(data-store/delete chat-id)))))

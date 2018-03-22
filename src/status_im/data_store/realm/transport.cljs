@@ -14,3 +14,8 @@
 (defn save
   [{:keys [chat-id] :as chat}]
   (realm/save @realm/account-realm :transport chat (exists? chat-id)))
+
+(defn delete
+  [chat-id]
+  (when-let [chat (realm/get-by-field @realm/account-realm :transport :chat-id chat-id)]
+    (realm/delete @realm/account-realm chat)))

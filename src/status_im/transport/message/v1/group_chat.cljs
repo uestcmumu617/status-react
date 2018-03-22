@@ -23,9 +23,9 @@
                                         :chat-id     chat-id
                                         :payload     this}
                                        cofx)))
-  (receive [this _ signature cofx]
+  (receive [this _ signature {:keys [db] :as cofx}]
     (handlers/merge-fx cofx
-                       {:shh/add-new-sym-key {:web3       (get-in cofx [:db :web3])
+                       {:shh/add-new-sym-key {:web3       (:web3 db)
                                               :sym-key    sym-key
                                               :on-success (fn [sym-key sym-key-id]
                                                             (re-frame/dispatch [::add-new-sym-key {:chat-id    chat-id
@@ -71,6 +71,12 @@
   {:removed (set/difference existing-participants-set new-participants-set)
    :added   (set/difference new-participants-set existing-participants-set)})
 
+(defn- unsubscribe-from-chat [chat-id {:keys [db]}]
+  (let [filter (get-in db [:transport/chats chat-id :filter])]
+    {:db (update db :transport/chats dissoc chat-id)
+     :data-store.transport/delete chat-id
+     :shh/delete-filter filter}))
+
 (defrecord GroupAdminUpdate [chat-name participants]
   message/StatusMessage
   (send [this chat-id cofx]
@@ -94,7 +100,8 @@
                                                                  (str admin-name " " (i18n/label :t/removed-from-chat))))
                                  (models.chat/update-chat {:chat-id         chat-id
                                                            :removed-from-at now
-                                                           :is-active       false}))
+                                                           :is-active       false})
+                                 (unsubscribe-from-chat chat-id))
               (handlers/merge-fx cofx
                                  (models.message/receive
                                   (models.message/system-message chat-id message-id now
@@ -111,25 +118,33 @@
 (defrecord GroupLeave []
   message/StatusMessage
   (send [this chat-id cofx]
-    (protocol/send {:payload this
-                    :chat-id chat-id}
+    (protocol/send {:chat-id       chat-id
+                    :payload       this
+                    :success-event [::unsubscribe-from-chat chat-id]}
                    cofx))
-  (receive [this chat-id signature {:keys [db now] :as cofx}] ()
+  (receive [this chat-id signature {:keys [db now] :as cofx}]
     (let [message-id               (transport.utils/message-id this)
-          participant-leaving-name (or (get-in db [:contacts/contacts signature])
+          participant-leaving-name (or (get-in db [:contacts/contacts signature :name])
                                        signature)]
       (handlers/merge-fx cofx
                          (models.message/receive
                           (models.message/system-message chat-id message-id now
                                                          (str participant-leaving-name " " (i18n/label :t/left))))
-                         (send-new-group-key this chat-id)
-                         (message/participants-removed chat-id #{signature})))))
+                         (message/participants-removed chat-id #{signature})
+                         (send-new-group-key nil chat-id)))))
+
+(handlers/register-handler-fx
+  ::unsubscribe-from-chat
+  [re-frame/trim-v]
+  (fn [cofx [chat-id]]
+    (unsubscribe-from-chat chat-id cofx)))
 
 (handlers/register-handler-fx
   ::send-new-sym-key
+  [re-frame/trim-v]
   ;; this is the event that is called when we want to send a message that required first
   ;; some async operations
-  (fn [{:keys [db] :as cofx} [_ {:keys [chat-id message sym-key sym-key-id]}]]
+  (fn [{:keys [db] :as cofx} [{:keys [chat-id message sym-key sym-key-id]}]]
     (let [{:keys [web3]} db]
       (handlers/merge-fx cofx
                          {:db (assoc-in db [:transport/chats chat-id :sym-key-id] sym-key-id)
@@ -146,17 +161,20 @@
 
 (handlers/register-handler-fx
   ::add-new-sym-key
-  (fn [{:keys [db] :as cofx} [_ {:keys [sym-key-id sym-key chat-id message]}]]
-    (let [{:keys [web3 current-public-key]} db]
-      (handlers/merge-fx cofx
-                         {:db (assoc-in db [:transport/chats chat-id :sym-key-id] sym-key-id)
-                          :shh/add-filter {:web3 web3
-                                           :sym-key-id sym-key-id
-                                           :topic (transport.utils/get-topic chat-id)
-                                           :chat-id chat-id}
-                          :data-store.transport/save {:chat-id chat-id
-                                                      :chat (-> (get-in db [:transport/chats chat-id])
-                                                                (assoc :sym-key-id sym-key-id)
-                                                                ;;TODO (yenda) remove once go implements persistence
-                                                                (assoc :sym-key sym-key))}}
-                         (message/receive message chat-id chat-id)))))
+  [re-frame/trim-v]
+  (fn [{:keys [db] :as cofx} [{:keys [sym-key-id sym-key chat-id message]}]]
+    (let [{:keys [web3 current-public-key]} db
+          fx {:db (assoc-in db [:transport/chats chat-id :sym-key-id] sym-key-id)
+              :shh/add-filter {:web3 web3
+                               :sym-key-id sym-key-id
+                               :topic (transport.utils/get-topic chat-id)
+                               :chat-id chat-id}
+              :data-store.transport/save {:chat-id chat-id
+                                          :chat (-> (get-in db [:transport/chats chat-id])
+                                                    (assoc :sym-key-id sym-key-id)
+                                                    ;;TODO (yenda) remove once go implements persistence
+                                                    (assoc :sym-key sym-key))}}]
+      ;; if new sym-key is wrapping some message, call receive on it as well, if not just update the transport layer
+      (if message 
+        (handlers/merge-fx cofx fx (message/receive message chat-id chat-id))
+        fx))))

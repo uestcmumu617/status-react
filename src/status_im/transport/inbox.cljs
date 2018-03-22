@@ -164,7 +164,7 @@
           wnode-id (get db :inbox/wnode)
           wnode    (get-in db [:inbox/wnodes wnode-id :address])
           password (:inbox/password db)]
-      (println #_log/info (str "offline inbox: mark-trusted-peer response" wnode response))
+      (log/info "offline inbox: mark-trusted-peer response" wnode response)
       {:shh/generate-sym-key-from-password {:password   password
                                             :web3       web3
                                             :on-success (fn [_ sym-key-id]

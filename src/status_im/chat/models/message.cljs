@@ -112,7 +112,7 @@
                        (send-message-seen chat-id message-id (and public-key
                                                                   current-chat?
                                                                   (not (chat-model/bot-only-chat? db chat-id))
-                                                                  (not (= "system" from))))
+                                                                  (not (= constants/system from))))
                        (add-placeholder-messages chat-id from new-timestamp last-from-clock-value last-to-clock-value new-from-clock-value))))
 
 (defn receive
@@ -126,7 +126,8 @@
   {:message-id   message-id
    :outgoing     false
    :chat-id      chat-id
-   :from         "system"
+   :from         constants/system
+   :username     constants/system
    :timestamp    timestamp
    :show?        true
    :content      content

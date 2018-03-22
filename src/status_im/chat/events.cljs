@@ -155,7 +155,7 @@
         unseen-messages-ids (into #{}
                                   (comp (filter (fn [[_ {:keys [from user-statuses outgoing]}]]
                                                   (and (not outgoing)
-                                                       (not= "system" from)
+                                                       (not= constants/system from)
                                                        (not= (get user-statuses me) :seen))))
                                         (map first))
                                   (get-in db messages-path))]
@@ -306,7 +306,7 @@
                          (transport/send (group-chat/GroupAdminUpdate. chat-name selected-contacts) random-id)))))
 
 (defn- broadcast-leave [{:keys [public? chat-id]} cofx]
-  (when public?
+  (when-not public?
     (transport/send (group-chat/GroupLeave.) chat-id cofx)))
 
 (handlers/register-handler-fx

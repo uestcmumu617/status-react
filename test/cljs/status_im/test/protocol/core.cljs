@@ -3,10 +3,11 @@
                                       async use-fixtures]]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :as async]
-            #_[status-im.protocol.web3.utils :as web3.utils]
+            ;;[status-im.protocol.web3.utils :as web3.utils]
             [status-im.test.protocol.node :as node]
             [status-im.test.protocol.utils :as utils]
-            #_[status-im.protocol.core :as protocol]))
+            ;;[status-im.protocol.core :as protocol]
+            ))
 
 ;; NOTE(oskarth): All these tests are evaluated in NodeJS
 

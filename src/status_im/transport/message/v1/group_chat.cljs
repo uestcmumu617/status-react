@@ -1,10 +1,11 @@
 (ns status-im.transport.message.v1.group-chat
-  (:require [re-frame.core :as re-frame]
-            [clojure.set :as set]
+  (:require [clojure.set :as set]
+            [re-frame.core :as re-frame]
             [status-im.utils.handlers :as handlers]
             [status-im.transport.message.core :as message]
             [status-im.i18n :as i18n]
             [status-im.chat.models :as models.chat]
+            [status-im.chat.models.message :as models.message]
             [status-im.transport.message.v1.protocol :as protocol]
             [status-im.transport.utils :as transport.utils]))
 
@@ -84,22 +85,23 @@
         (when (= signature group-admin) ;; make sure that admin is the one making changes
           (let [{:keys [removed added]} (participants-diff (set contacts) (set participants))
                 admin-name              (or (get-in cofx [db :contacts/contacts group-admin :name])
-                                            group-admin) 
+                                            group-admin)
                 message-id              (transport.utils/message-id this)]
             (if (removed me) ;; we were removed
               (handlers/merge-fx cofx
-                                 {:system-message {:message-id message-id
-                                                   :chat-id    chat-id
-                                                   :timestamp  now
-                                                   :content    (str admin-name " " (i18n/label :t/removed-from-chat))}}
+                                 (models.message/receive
+                                  (models.message/system-message chat-id message-id now
+                                                                 (str admin-name " " (i18n/label :t/removed-from-chat))))
                                  (models.chat/update-chat {:chat-id         chat-id
                                                            :removed-from-at now
                                                            :is-active       false}))
               (handlers/merge-fx cofx
-                                 {:system-message {:message-id message-id
-                                                   :chat-id    chat-id
-                                                   :timestamp  now
-                                                   :content    (prepare-system-message admin-name added removed (:contacts/contacts db))}} 
+                                 (models.message/receive
+                                  (models.message/system-message chat-id message-id now
+                                                                 (prepare-system-message admin-name
+                                                                                         added
+                                                                                         removed
+                                                                                         (:contacts/contacts db))))
                                  (message/participants-added chat-id added)
                                  (message/participants-removed chat-id removed)))))
         ;; first time we hear about chat -> create it if we are among participants
@@ -112,16 +114,16 @@
     (protocol/send {:payload this
                     :chat-id chat-id}
                    cofx))
-  (receive [this chat-id signature {:keys [now] :as cofx}]
+  (receive [this chat-id signature {:keys [db now] :as cofx}] ()
     (let [message-id               (transport.utils/message-id this)
-          participant-leaving-name (get-in cofx [:db :contacts signature] signature)]
+          participant-leaving-name (or (get-in db [:contacts/contacts signature])
+                                       signature)]
       (handlers/merge-fx cofx
-                         {:system-message {:message-id message-id
-                                           :chat-id    chat-id
-                                           :timestamp  now
-                                           :content (str participant-leaving-name " " (i18n/label :t/left))}}
+                         (models.message/receive
+                          (models.message/system-message chat-id message-id now
+                                                         (str participant-leaving-name " " (i18n/label :t/left))))
                          (send-new-group-key this chat-id)
-                         (message/participants-removed chat-id [signature])))))
+                         (message/participants-removed chat-id #{signature})))))
 
 (handlers/register-handler-fx
   ::send-new-sym-key

@@ -153,8 +153,9 @@
   (let [me                  (:current-public-key db)
         messages-path       [:chats chat-id :messages]
         unseen-messages-ids (into #{}
-                                  (comp (filter (fn [[_ {:keys [user-statuses outgoing]}]]
+                                  (comp (filter (fn [[_ {:keys [from user-statuses outgoing]}]]
                                                   (and (not outgoing)
+                                                       (not= "system" from)
                                                        (not= (get user-statuses me) :seen))))
                                         (map first))
                                   (get-in db messages-path))]
@@ -308,14 +309,14 @@
   (when public?
     (transport/send (group-chat/GroupLeave.) chat-id cofx)))
 
-(handlers/register-handler
+(handlers/register-handler-fx
   :leave-group-chat
   ;; stop listening to group here
   (fn [{{:keys [current-chat-id chats] :as db} :db :as cofx} _]
     (handlers/merge-fx cofx
                        (models/remove-chat current-chat-id)
                        (navigation/replace-view :home)
-                       (broadcast-leave (chats current-chat-id)))))
+                       (broadcast-leave (get chats current-chat-id)))))
 
 (handlers/register-handler-fx
   :leave-group-chat?

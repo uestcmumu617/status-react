@@ -1,12 +1,10 @@
 (ns status-im.ui.screens.group.chat-settings.events
-  (:require [re-frame.core :as re-frame]
-            [status-im.constants :as constants]
-            [status-im.data-store.messages :as messages]
+  (:require [re-frame.core :as re-frame] 
             [status-im.i18n :as i18n]
+            [status-im.chat.models.message :as models.message]
             [status-im.transport.message.v1.group-chat :as group-chat]
             [status-im.transport.message.core :as transport]
-            [status-im.utils.handlers :as handlers]
-            [status-im.utils.random :as random]))
+            [status-im.utils.handlers :as handlers]))
 
 
 ;;;; Handlers
@@ -20,7 +18,8 @@
 
 (handlers/register-handler-fx
   :add-new-group-chat-participants
-  (fn [{{:keys [current-chat-id selected-participants] :as db} :db now :now :as cofx} _]
+  [(re-frame/inject-cofx :random-id)]
+  (fn [{{:keys [current-chat-id selected-participants] :as db} :db now :now message-id :random-id :as cofx} _]
     (let [new-identities           (map #(hash-map :identity %) selected-participants)
           participants             (concat (get-in db [:chats current-chat-id :contacts])
                                            selected-participants)
@@ -30,25 +29,26 @@
                          {:db (-> db
                                   (assoc-in [:chats current-chat-id :contacts] participants)
                                   (assoc :selected-participants #{}))
-                          :data-store/add-chat-contacts (select-keys db [:current-chat-id :selected-participants])
-                          :system-message {:chat-id   current-chat-id
-                                           :timestamp now
-                                           :content (str "You've added " (apply str (interpose ", " added-participants-names)))}}
+                          :data-store/add-chat-contacts (select-keys db [:current-chat-id :selected-participants])}
+                         (models.message/receive
+                          (models.message/system-message current-chat-id message-id now
+                                                         (str "You've added " (apply str (interpose ", " added-participants-names)))))
                          (transport/send (group-chat/GroupAdminUpdate. nil participants) current-chat-id)))))
 
 (handlers/register-handler-fx
   :remove-group-chat-participants
-  (fn [{{:keys [current-chat-id] :as db} :db now :now :as cofx} [_ removed-participants]]
+  [re-frame/trim-v (re-frame/inject-cofx :random-id)]
+  (fn [{{:keys [current-chat-id] :as db} :db now :now message-id :random-id :as cofx} [removed-participants]]
     (let [participants               (remove #(removed-participants (:identity %))
                                              (get-in db [:chats current-chat-id :contacts]))
           contacts                   (:contacts/contacts db)
           removed-participants-names (map #(get-in contacts [% :name]) removed-participants)]
       (handlers/merge-fx cofx
                          {:db (assoc-in db [:chats current-chat-id :contacts] participants)
-                          :data-store/remove-chat-contacts [current-chat-id removed-participants]
-                          :system-message {:chat-id current-chat-id
-                                           :timestamp now
-                                           :content (str "You've removed " (apply str (interpose ", " removed-participants-names)))}}
+                          :data-store/remove-chat-contacts [current-chat-id removed-participants]}
+                         (models.message/receive
+                          (models.message/system-message current-chat-id message-id now
+                                                         (str "You've removed " (apply str (interpose ", " removed-participants-names))))) 
                          (transport/send (group-chat/GroupAdminUpdate. nil participants) current-chat-id)))))
 
 (handlers/register-handler-fx

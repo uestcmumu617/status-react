@@ -109,7 +109,10 @@
                                                 (lookup-response-ref access-scope->commands-responses
                                                                      current-account chat contacts request-command)))
                                     current-chat?)
-                       (send-message-seen chat-id message-id (and public-key current-chat? (not (chat-model/bot-only-chat? db chat-id))))
+                       (send-message-seen chat-id message-id (and public-key
+                                                                  current-chat?
+                                                                  (not (chat-model/bot-only-chat? db chat-id))
+                                                                  (not (= "system" from))))
                        (add-placeholder-messages chat-id from new-timestamp last-from-clock-value last-to-clock-value new-from-clock-value))))
 
 (defn receive
@@ -118,6 +121,16 @@
                      (prepare-chat chat-id)
                      (add-received-message message)
                      (requests-events/add-request chat-id message-id)))
+
+(defn system-message [chat-id message-id timestamp content]
+  {:message-id   message-id
+   :outgoing     false
+   :chat-id      chat-id
+   :from         "system"
+   :timestamp    timestamp
+   :show?        true
+   :content      content
+   :content-type constants/text-content-type})
 
 (defn add-to-chat?
   [{:keys [db get-stored-message]} {:keys [group-id chat-id from message-id]}]

@@ -1,6 +1,6 @@
 (ns status-im.ui.screens.events
   (:require status-im.bots.events
-            status-im.chat.handlers
+            status-im.chat.events
             status-im.commands.handlers.jail
             status-im.commands.events.loading
             status-im.commands.handlers.debug

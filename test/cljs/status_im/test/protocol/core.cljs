@@ -3,7 +3,7 @@
                                       async use-fixtures]]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :as async]
-            [status-im.protocol.web3.utils :as web3.utils]
+            #_[status-im.protocol.web3.utils :as web3.utils]
             [status-im.test.protocol.node :as node]
             [status-im.test.protocol.utils :as utils]
             [status-im.protocol.core :as protocol]))
@@ -64,41 +64,41 @@
             (done)))
 
 ;; TODO(oskarth): Fix this test, issue with private key not being persisted
-(deftest test-send-message!
-  (async done
-    (let [timeout       30
-          web3          (make-web3)
-          id1-keypair   (protocol/new-keypair!)
-          common-config {:web3                        web3
-                         :groups                      []
-                         :ack-not-received-s-interval 125
-                         :default-ttl                 120
-                         :send-online-s-interval      180
-                         :ttl-config                  {:public-group-message 2400}
-                         :max-attempts-number         3
-                         :delivery-loop-ms-interval   500
-                         :hashtags                    []
-                         :pending-messages            []}
-          id1-config    (id-specific-config node/identity-1 id1-keypair [] done)]
-      (ensure-test-terminates! timeout done)
-      (protocol/init-whisper! (merge common-config id1-config))
-      (protocol/send-message!
-        {:web3    web3
-         :message {:message-id "123"
-                   :from       node/identity-1
-                   :to         node/identity-2
-                   :payload    {:type         :message
-                                :content-type "text/plain"
-                                :content      "123"
-                                :timestamp    1498723691404}}}))))
-
-(deftest test-whisper-version!
-  (testing "Whisper version supported"
+#_(deftest test-send-message!
     (async done
-           (node/start!)
-           (let [web3 (make-web3)
-                 shh  (web3.utils/shh web3)]
-             (.version shh
-                       (fn [& args]
-                         (is (= "5.0" (second args)))
-                         (done)))))))
+           (let [timeout       30
+                 web3          (make-web3)
+                 id1-keypair   (protocol/new-keypair!)
+                 common-config {:web3                        web3
+                                :groups                      []
+                                :ack-not-received-s-interval 125
+                                :default-ttl                 120
+                                :send-online-s-interval      180
+                                :ttl-config                  {:public-group-message 2400}
+                                :max-attempts-number         3
+                                :delivery-loop-ms-interval   500
+                                :hashtags                    []
+                                :pending-messages            []}
+                 id1-config    (id-specific-config node/identity-1 id1-keypair [] done)]
+             (ensure-test-terminates! timeout done)
+             (protocol/init-whisper! (merge common-config id1-config))
+             (protocol/send-message!
+              {:web3    web3
+               :message {:message-id "123"
+                         :from       node/identity-1
+                         :to         node/identity-2
+                         :payload    {:type         :message
+                                      :content-type "text/plain"
+                                      :content      "123"
+                                      :timestamp    1498723691404}}}))))
+
+#_(deftest test-whisper-version!
+    (testing "Whisper version supported"
+      (async done
+             (node/start!)
+             (let [web3 (make-web3)
+                   shh  (web3.utils/shh web3)]
+               (.version shh
+                         (fn [& args]
+                           (is (= "5.0" (second args)))
+                           (done)))))))

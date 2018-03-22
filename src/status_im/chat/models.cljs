@@ -1,5 +1,5 @@
 (ns status-im.chat.models
-  (:require [status-im.ui.components.styles :as styles]
+  (:require [status-im.ui.components.styles :as styles] 
             [status-im.utils.gfycat.core :as gfycat]))
 
 (defn set-chat-ui-props
@@ -39,6 +39,37 @@
                      (update :chats assoc chat-id new-chat)
                      (update :deleted-chats (fnil disj #{}) chat-id))
       :save-chat new-chat})))
+
+(defn add-public-chat
+  "Adds new public group chat to db & realm"
+  [topic {:keys [db now] :as cofx}]
+  (let [chat {:chat-id               topic
+              :name                  topic
+              :color                 styles/default-chat-color
+              :group-chat            true
+              :public?               true
+              :is-active             true
+              :timestamp             now
+              :last-to-clock-value   0
+              :last-from-clock-value 0}]
+    {:db        (assoc-in db [:chats topic] chat)
+     :save-chat chat}))
+
+(defn add-group-chat
+  "Adds new private group chat to db & realm"
+  [chat-id chat-name admin participants {:keys [db now] :as cofx}]
+  (let [chat {:chat-id               chat-id
+              :name                  chat-name
+              :color                 styles/default-chat-color
+              :group-chat            true
+              :group-admin           admin
+              :is-active             true
+              :timestamp             now
+              :contacts              (mapv (partial hash-map :identity) participants)
+              :last-to-clock-value   0
+              :last-from-clock-value 0}]
+    {:db        (assoc-in db [:chats chat-id] chat)
+     :save-chat chat}))
 
 ;; TODO (yenda): there should be an option to update the timestamp
 ;; this shouldn't need a specific function like `upsert-chat` which

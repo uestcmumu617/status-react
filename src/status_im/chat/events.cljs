@@ -7,8 +7,7 @@
             [status-im.chat.models :as models]
             [status-im.chat.console :as console]
             [status-im.chat.constants :as chat.constants]
-            [status-im.ui.components.list-selection :as list-selection]
-            [status-im.ui.components.styles :as components.styles]
+            [status-im.ui.components.list-selection :as list-selection] 
             [status-im.ui.screens.navigation :as navigation]
             [status-im.utils.handlers :as handlers]
             [status-im.transport.message.core :as transport]
@@ -275,21 +274,12 @@
     (if (get-in db [:chats topic])
       (handlers/merge-fx cofx
                          (navigation/navigate-to-clean :home)
-                         (navigate-to-chat topic {}))
-      (let [chat {:chat-id               topic
-                  :name                  topic
-                  :color                 components.styles/default-chat-color
-                  :group-chat            true
-                  :public?               true
-                  :is-active             true
-                  :timestamp             now
-                  :last-to-clock-value   0
-                  :last-from-clock-value 0}]
-        (handlers/merge-fx {:db        (assoc-in db [:chats topic] chat)
-                            :save-chat chat}
-                           (navigation/navigate-to-clean :home)
-                           (navigate-to-chat topic {})
-                           (public-chat/join-public-chat topic))))))
+                         (navigate-to-chat topic {})) 
+      (handlers/merge-fx cofx
+                         (models/add-public-chat topic)
+                         (navigation/navigate-to-clean :home)
+                         (navigate-to-chat topic {})
+                         (public-chat/join-public-chat topic)))))
 
 (defn- group-name-from-contacts [selected-contacts all-contacts username]
   (->> selected-contacts
@@ -302,28 +292,17 @@
   [re-frame/trim-v (re-frame/inject-cofx :random-id)]
   (fn [{:keys [db now random-id] :as cofx} [group-name]]
     (let [selected-contacts (:group/selected-contacts db)
-          chat              {:chat-id               random-id
-                             :name                  (if-not (string/blank? group-name)
-                                                      group-name
-                                                      (group-name-from-contacts selected-contacts
-                                                                                (:contacts/contacts db)
-                                                                                (:username db)))
-                             :color                 components.styles/default-chat-color
-                             :group-chat            true
-                             :group-admin           (:current-public-key db)
-                             :is-active             true
-                             :timestamp             now
-                             :contacts              (mapv (partial hash-map :identity) selected-contacts)
-                             :last-to-clock-value   0
-                             :last-from-clock-value 0}]
+          chat-name         (if-not (string/blank? group-name)
+                              group-name
+                              (group-name-from-contacts selected-contacts
+                                                        (:contacts/contacts db)
+                                                        (:username db)))]
       (handlers/merge-fx cofx
-                         {:db (-> db
-                                  (assoc-in [:chats random-id] chat)
-                                  (assoc :group/selected-contacts #{}))
-                          :save-chat chat}
+                         {:db (assoc db :group/selected-contacts #{})} 
+                         (models/add-group-chat random-id chat-name (:current-public-key db) selected-contacts)
                          (navigation/navigate-to-clean :home)
                          (navigate-to-chat random-id {})
-                         (transport/send (group-chat/GroupAdminUpdate. selected-contacts) random-id)))))
+                         (transport/send (group-chat/GroupAdminUpdate. chat-name selected-contacts) random-id)))))
 
 (defn- broadcast-leave [{:keys [public? chat-id]} cofx]
   (when public?

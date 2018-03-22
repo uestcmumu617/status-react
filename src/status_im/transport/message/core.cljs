@@ -71,16 +71,16 @@
 
 ;; Group chat
 (defn participants-added [chat-id added-participants {:keys [db] :as cofx}]
-  (when added-participants
+  (when (seq added-participants)
     {:db (update-in db [:chats chat-id :contacts] concat (mapv #(hash-map :identity %) added-participants))
      :data-store/add-chat-contacts [chat-id added-participants]}))
 
 (defn participants-removed [chat-id removed-participants {:keys [now db] :as cofx}]
-  (when removed-participants
+  (when (seq removed-participants)
     (let [{:keys [is-active timestamp]} (get-in db [:chats chat-id])]
       ;;TODO: not sure what this condition is for
       (when (and is-active (> now timestamp))
-        {:data-store/remove-chat-contacts [chat-id removed-participants]
-         :db (update-in db [:chats chat-id :contacts]
+        {:db (update-in db [:chats chat-id :contacts]
                         #(remove (fn [{:keys [identity]}]
-                                   (removed-participants identity)) %))}))))
+                                   (removed-participants identity)) %))
+         :data-store/remove-chat-contacts [chat-id removed-participants]}))))

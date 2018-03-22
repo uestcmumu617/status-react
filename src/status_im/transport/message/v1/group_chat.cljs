@@ -1,5 +1,6 @@
 (ns status-im.transport.message.v1.group-chat
   (:require [re-frame.core :as re-frame]
+            [clojure.set :as set]
             [status-im.utils.handlers :as handlers]
             [status-im.transport.message.core :as message]
             [status-im.i18n :as i18n]
@@ -61,46 +62,49 @@
       removed-participants
       (str admin-name " " (i18n/label :t/removed) " " (apply str (interpose ", " removed-participants-names))))))
 
-(defn init-chat-if-new [chat-id cofx]
+(defn- init-chat-if-new [chat-id cofx]
   (if (nil? (get-in cofx [:db :transport/chats chat-id]))
     (protocol/init-chat chat-id cofx)))
 
-(defrecord GroupAdminUpdate [participants]
+(defn- participants-diff [existing-participants-set new-participants-set]
+  {:removed (set/difference existing-participants-set new-participants-set)
+   :added   (set/difference new-participants-set existing-participants-set)})
+
+(defrecord GroupAdminUpdate [chat-name participants]
   message/StatusMessage
   (send [this chat-id cofx]
     (handlers/merge-fx cofx
                        (init-chat-if-new chat-id)
                        (send-new-group-key this chat-id)))
   (receive [this chat-id signature {:keys [now db] :as cofx}]
-    (let [current-public-key (:current-public-key db)
-          chat               (get-in db [:chats chat-id])
-          admin              (:group-admin chat)
-          from-admin?        (= signature admin)]
-      (if from-admin?
-        (let [[added-participants removed-participants _] (clojure.data/diff (mapv :identity (:contacts chat))
-                                                                             participants)
-              admin-name                                  (or (get-in cofx [db :contacts admin]) admin)
-              user-removed?                               (removed-participants current-public-key)
-              message-id                                  (transport.utils/message-id this)]
-          (if user-removed?
-            (handlers/merge-fx cofx
-                               {:system-message {:message-id message-id
-                                                 :chat-id    chat-id
-                                                 :timestamp  now
-                                                 :content    (str admin-name " " (i18n/label :t/removed-from-chat))}}
-                               (models.chat/update-chat {:chat-id         chat-id
-                                                         :removed-from-at now
-                                                         :is-active       false}))
-            (handlers/merge-fx cofx
-                               {:system-message {:message-id message-id
-                                                 :chat-id    chat-id
-                                                 :timestamp  now
-                                                 :content (prepare-system-message admin-name
-                                                                                  added-participants
-                                                                                  removed-participants
-                                                                                  (:contacts/contacts db))}}
-                               (message/participants-removed chat-id removed-participants)
-                               (message/participants-added chat-id added-participants))))))))
+    (let [me (:current-public-key db)]
+      ;; we have to check if we already have a chat, or it's a new one
+      (if-let [{:keys [group-admin contacts] :as chat} (get-in db [:chats chat-id])]
+        ;; update for existing group chat
+        (when (= signature group-admin) ;; make sure that admin is the one making changes
+          (let [{:keys [removed added]} (participants-diff (set contacts) (set participants))
+                admin-name              (or (get-in cofx [db :contacts/contacts group-admin :name])
+                                            group-admin) 
+                message-id              (transport.utils/message-id this)]
+            (if (removed me) ;; we were removed
+              (handlers/merge-fx cofx
+                                 {:system-message {:message-id message-id
+                                                   :chat-id    chat-id
+                                                   :timestamp  now
+                                                   :content    (str admin-name " " (i18n/label :t/removed-from-chat))}}
+                                 (models.chat/update-chat {:chat-id         chat-id
+                                                           :removed-from-at now
+                                                           :is-active       false}))
+              (handlers/merge-fx cofx
+                                 {:system-message {:message-id message-id
+                                                   :chat-id    chat-id
+                                                   :timestamp  now
+                                                   :content    (prepare-system-message admin-name added removed (:contacts/contacts db))}} 
+                                 (message/participants-added chat-id added)
+                                 (message/participants-removed chat-id removed)))))
+        ;; first time we hear about chat -> create it if we are among participants
+        (when (get (set participants) me)
+          (models.chat/add-group-chat chat-id chat-name signature participants cofx))))))
 
 (defrecord GroupLeave []
   message/StatusMessage

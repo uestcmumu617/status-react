@@ -43,8 +43,8 @@
 (deftype GroupAdminUpdateHandler []
   Object
   (tag [this v] "g2")
-  (rep [this {:keys [participants]}]
-    (clj->js participants)))
+  (rep [this {:keys [chat-name participants]}]
+    #js [chat-name participants]))
 
 (deftype GroupLeaveHandler []
   Object
@@ -66,8 +66,8 @@
                                      (v1.protocol/MessagesSeen. message-ids))
                               "g1" (fn [[chat-id sym-key message]]
                                      (v1.group-chat/NewGroupKey. chat-id sym-key message))
-                              "g2" (fn [participants]
-                                     (v1.group-chat/GroupAdminUpdate. participants))
+                              "g2" (fn [[chat-name participants]]
+                                     (v1.group-chat/GroupAdminUpdate. chat-name participants))
                               "g3" (fn [_]
                                      (v1.group-chat/GroupLeave.))}}))
 

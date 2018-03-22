@@ -67,7 +67,7 @@
                      :symKeyID       sym-key-id}
                     (when from {:from from})
                     (when to {:to to}))]
-    (log/info "offline inbox: request-messages request")
+    (log/info "offline inbox: request-messages request for topics " topics)
     (doseq [topic topics]
       (let [opts (assoc opts :topic topic)]
         (log/info "offline inbox: request-messages args" (pr-str opts))
@@ -76,7 +76,7 @@
                           (fn [err resp]
                             (if-not err
                               (success-fn resp)
-                              (error-fn err))))))))
+                              (error-fn err topic))))))))
 
 (re-frame/reg-fx
   ::add-peer
@@ -102,15 +102,15 @@
 
 (re-frame/reg-fx
   ::request-messages
-  (fn [{:keys [wnode topic to from sym-key-id web3]}]
+  (fn [{:keys [wnode topics to from sym-key-id web3]}]
     (request-messages web3
                       wnode
-                      topic
+                      topics
                       to
                       from
                       sym-key-id
                       #(log/info "offline inbox: request-messages response" %)
-                      #(log/error "offline inbox: request-messages error" % topic to from))))
+                      #(log/error "offline inbox: request-messages error" %1 %2 to from))))
 
 ;;;; Handlers
 
@@ -180,7 +180,7 @@
     (let [web3 (:web3 db)
           wnode-id (get db :inbox/wnode)
           wnode    (get-in db [:inbox/wnodes wnode-id :address])
-          topics   (map #(:topic %2) (:transport/chats db))
+          topics   (map #(:topic %) (vals (:transport/chats db)))
           to       nil
           from     nil]
       {::request-messages {:wnode      wnode

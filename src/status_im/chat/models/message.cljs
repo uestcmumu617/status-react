@@ -113,7 +113,7 @@
                        (add-placeholder-messages chat-id from new-timestamp last-from-clock-value last-to-clock-value new-from-clock-value))))
 
 (defn receive
-  [cofx {:keys [chat-id message-id] :as message}]
+  [{:keys [chat-id message-id] :as message} cofx]
   (handlers/merge-fx cofx
                      (prepare-chat chat-id)
                      (add-received-message message)
@@ -162,7 +162,7 @@
                         :chat-id      chat-id
                         :from         chat-id
                         :to           "me"})]
-    (receive cofx message)))
+    (receive message cofx)))
 
 (defn- send-dapp-message!
   [{{:accounts/keys [current-account-id] :as db} :db :as cofx} chat-id {:keys [content-type] :as message}]
@@ -179,7 +179,7 @@
 
 (defn- send
   [chat-id send-record {{:keys [chats] :contacts/keys [contacts] :as db} :db :as cofx}]
-  (let [{:keys [dapp? fcm-token]} (get contacts chat-id)] 
+  (let [{:keys [dapp? fcm-token]} (get contacts chat-id)]
     (if dapp?
       (send-dapp-message! cofx chat-id send-record)
       (if fcm-token

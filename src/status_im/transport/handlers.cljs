@@ -9,19 +9,18 @@
             [status-im.transport.utils :as transport.utils]
             [cljs.reader :as reader]
             [status-im.transport.message.transit :as transit]
-            [status-im.transport.shh :as shh]))
+            [status-im.transport.shh :as shh]
+            [status-im.transport.filters :as filters]))
 
+;;TODO remove this once update-account function has been rewritten with merge-fx macro
 (re-frame/reg-fx
-  :stop-whisper
-  (fn []
-    (transport/stop-whisper!)))
-
-(re-frame/reg-fx
-  :transport/init-whisper
-  (fn [{:keys [web3 public-key transport]}]
-    (transport/init-whisper! {:web3      web3
-                              :identity  public-key
-                              :transport transport})))
+  :transport/stop-whisper
+  (fn [{:keys [db]}]
+    (let [{:transport/keys [chats discovery-filter]} db
+          chat-filters                               (mapv :filter (vals chats))
+          all-filters                                (conj chat-filters discovery-filter)]
+      (doseq [filter all-filters]
+        (filters/remove-filter! filter)))))
 
 (handlers/register-handler-fx
   :protocol/receive-whisper-message

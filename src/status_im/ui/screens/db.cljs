@@ -171,6 +171,7 @@
                   :new/open-dapp
                   :navigation/screen-params
                   :transport/chats
+                  :transport/discovery-filter
                   :desktop/desktop]
                  :opt-un
                  [::current-public-key

@@ -33,6 +33,7 @@
             [status-im.data-store.core :as data-store]
             [status-im.i18n :as i18n]
             [status-im.js-dependencies :as dependencies]
+            [status-im.transport.core :as transport]
             [status-im.ui.screens.db :refer [app-db]]
             [status-im.utils.datetime :as time]
             [status-im.utils.ethereum.core :as ethereum]
@@ -228,6 +229,19 @@
                                    [:listen-to-network-status]
                                    [:initialize-crypt]
                                    [:initialize-geth]]}))
+
+(handlers/register-handler-fx
+  :logout
+  (fn [{:keys [db] :as cofx} _]
+    (let [{:transport/keys [chats] :keys [current-account-id]} db
+          sharing-usage-data? (get-in db [:accounts/accounts current-account-id :sharing-usage-data?])]
+      {:dispatch-n             (concat [[:initialize-db]
+                                        [:load-accounts]
+                                        [:listen-to-network-status]
+                                        [:navigate-to :accounts]]
+                                       (when sharing-usage-data?
+                                         [[:unregister-mixpanel-tracking]]))
+       :transport/stop-whisper cofx})))
 
 (handlers/register-handler-fx
   :initialize-db

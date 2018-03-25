@@ -1,7 +1,7 @@
 (ns status-im.ui.screens.profile.user.views
   (:require-macros [status-im.utils.views :refer [defview letsubs]])
   (:require [re-frame.core :as re-frame]
-            [status-im.i18n :as i18n] 
+            [status-im.i18n :as i18n]
             [status-im.ui.components.action-button.styles :as action-button.styles]
             [status-im.ui.components.colors :as colors]
             [status-im.ui.components.common.styles :as common.styles]
@@ -106,22 +106,15 @@
         :icon-content [components.common/counter {:size 22} 1]}]
       [profile.components/settings-item-separator]])])
 
-(defn navigate-to-accounts [sharing-usage-data?]
-  ;; TODO(rasom): probably not the best place for this call
-  #_(protocol/stop-whisper!)
-  (re-frame/dispatch [:navigate-to :accounts])
-  (when sharing-usage-data?
-    (re-frame/dispatch [:unregister-mixpanel-tracking])))
-
-(defn handle-logout [sharing-usage-data?]
+(defn handle-logout []
   (utils/show-confirmation (i18n/label :t/logout-title)
                            (i18n/label :t/logout-are-you-sure)
-                           (i18n/label :t/logout) #(navigate-to-accounts sharing-usage-data?)))
+                           (i18n/label :t/logout) #(re-frame/dispatch [:logout])))
 
-(defn logout [sharing-usage-data?]
+(defn logout []
   [react/view {}
    [react/touchable-highlight
-    {:on-press            #(handle-logout sharing-usage-data?)
+    {:on-press            #(handle-logout)
      :accessibility-label :log-out-button}
     [react/view profile.components.styles/settings-item
      [react/text {:style styles/logout-text
@@ -160,7 +153,7 @@
           :action-fn #(re-frame/dispatch [:switch-dev-mode %])}]])]))
 
 (defview my-profile []
-  (letsubs [{:keys [public-key sharing-usage-data?] :as current-account} [:get-current-account]
+  (letsubs [{:keys [public-key] :as current-account} [:get-current-account]
             editing?        [:get :my-profile/editing?]
             changed-account [:get :my-profile/profile]]
     (let [shown-account (merge current-account changed-account)]
@@ -175,5 +168,5 @@
          [share-contact-code current-account public-key]]
         [react/view styles/my-profile-info-container
          [my-profile-settings current-account]]
-        [logout sharing-usage-data?]
+        [logout]
         [advanced shown-account]]])))

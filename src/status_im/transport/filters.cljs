@@ -30,8 +30,8 @@
   :shh/add-filter
   (fn [{:keys [web3 sym-key-id topic chat-id]}]
     (when-let [filter (add-filter! web3
-                                   {:symKeyID sym-key-id
-                                    :topics [topic]}
+                                   {:topics [topic]
+                                    :symKeyID sym-key-id}
                                    (fn [js-error js-message]
                                      (re-frame/dispatch [:protocol/receive-whisper-message js-error js-message chat-id])))]
       (re-frame/dispatch [::filter-added chat-id filter]))))
@@ -43,6 +43,28 @@
     (assoc-in db [:transport/chats chat-id :filter] filter)))
 
 (re-frame/reg-fx
+  :shh/add-discovery-filter
+  (fn [{:keys [web3 private-key-id topic]}]
+    (when-let [filter (add-filter! web3
+                                   {:topics [topic]
+                                    :privateKeyID private-key-id}
+                                   (fn [js-error js-message]
+                                     (re-frame/dispatch [:protocol/receive-whisper-message js-error js-message])))]
+      (re-frame/dispatch [::discovery-filter-added filter]))))
+
+(handlers/register-handler-db
+  ::discovery-filter-added
+  [re-frame/trim-v]
+  (fn [db [filter]]
+    (assoc db :transport/discovery-filter filter)))
+
+(re-frame/reg-fx
   :shh/delete-filter
   (fn [filter]
     (when filter (remove-filter! filter))))
+
+(re-frame/reg-fx
+  :shh/remove-filters
+  (fn [filters]
+    (doseq [filter filters]
+      (remove-filter! filter))))

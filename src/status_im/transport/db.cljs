@@ -7,7 +7,7 @@
 (spec/def ::seen (spec/coll-of string? :kind vector?))
 (spec/def ::pending-ack (spec/coll-of string? :kind vector?))
 (spec/def ::pending-send (spec/coll-of string? :kind vector?))
-(spec/def ::topic string?) 
+(spec/def ::topic string?)
 
 ;; optional
 (spec/def ::sym-key-id string?)
@@ -19,7 +19,7 @@
                                         :opt-un [::sym-key-id ::sym-key ::filter]))
 
 (spec/def :transport/chats (spec/map-of :global/not-empty-string :transport/chat))
-
+(spec/def :transport/discovery-filter (spec/nilable any?))
 
 (defn create-chat [topic]
   {:ack []

@@ -115,7 +115,7 @@
 
 ;;TODO (yenda) remove once go implements persistence
 (re-frame/reg-fx
-  :shh/add-sym-keys
+  :shh/restore-sym-keys
   (fn [{:keys [web3 transport on-success]}]
     (doseq [[chat-id {:keys [sym-key]}] transport]
       (add-sym-key {:web3 web3

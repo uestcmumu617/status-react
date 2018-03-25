@@ -6,11 +6,11 @@
 
 (handlers/register-handler-fx
   ::save-wnode
-  (fn [{:keys [db now]} [_ wnode]]
+  (fn [{:keys [db now] :as cofx} [_ wnode]]
     (-> (accounts-events/account-update {:db db}
                                         {:wnode wnode :last-updated now})
-     (merge {:dispatch    [:navigate-to-clean :accounts]
-             :stop-whisper nil}))))
+        (merge {:dispatch    [:navigate-to-clean :accounts]
+                :transport/stop-whisper cofx}))))
 
 (handlers/register-handler-fx
   :connect-wnode

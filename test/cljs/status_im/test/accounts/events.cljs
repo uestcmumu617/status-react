@@ -50,12 +50,6 @@
   (rf/reg-fx ::account-events/send-keys-update #())
 
   (rf/reg-cofx
-    :get-new-keypair!
-    (fn [coeffects _]
-      (assoc coeffects :keypair {:public  "new public"
-                                 :private "new private"})))
-
-  (rf/reg-cofx
     ::account-events/get-all-accounts
     (fn [coeffects _]
       (assoc coeffects :all-accounts [account-from-realm]))))

@@ -18,12 +18,6 @@
 ;;;; COFX
 
 (re-frame/reg-cofx
-  :get-new-keypair!
-  (fn [coeffects _]
-    #_(assoc coeffects :keypair (protocol/new-keypair!))
-    {:public "public" :private "private"}))
-
-(re-frame/reg-cofx
   ::get-signing-phrase
   (fn [coeffects _]
     (assoc coeffects :signing-phrase (signing-phrase/generate))))

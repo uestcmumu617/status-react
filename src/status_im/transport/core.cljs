@@ -59,8 +59,6 @@
                            (fn [js-error js-message]
                              (re-frame/dispatch [:protocol/receive-whisper-message js-error js-message chat-id])))))
 
-
-;;TODO currently unused, will be used instead of stop-whisper effect once update-account function has been rewritten with merge-fx macro
 (defn stop-whisper [{:keys [db]}]
   (let [{:transport/keys [chats discovery-filter]} db
         chat-filters                               (mapv :filter (vals chats))

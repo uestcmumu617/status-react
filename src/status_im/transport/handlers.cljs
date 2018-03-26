@@ -12,16 +12,6 @@
             [status-im.transport.shh :as shh]
             [status-im.transport.filters :as filters]))
 
-;;TODO remove this once update-account function has been rewritten with merge-fx macro
-(re-frame/reg-fx
-  :transport/stop-whisper
-  (fn [{:keys [db]}]
-    (let [{:transport/keys [chats discovery-filter]} db
-          chat-filters                               (mapv :filter (vals chats))
-          all-filters                                (conj chat-filters discovery-filter)]
-      (doseq [filter all-filters]
-        (filters/remove-filter! filter)))))
-
 (handlers/register-handler-fx
   :protocol/receive-whisper-message
   [re-frame/trim-v]

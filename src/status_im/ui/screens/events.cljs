@@ -97,7 +97,7 @@
          (dissoc :callback-event-creator)
          (assoc :callback
                 (fn [jail-response]
-                  (when-let [event (callback-event-creator jail-response)] 
+                  (when-let [event (callback-event-creator jail-response)]
                     (re-frame/dispatch event))))))))
 
 (re-frame/reg-fx
@@ -235,13 +235,14 @@
   (fn [{:keys [db] :as cofx} _]
     (let [{:transport/keys [chats] :keys [current-account-id]} db
           sharing-usage-data? (get-in db [:accounts/accounts current-account-id :sharing-usage-data?])]
-      {:dispatch-n             (concat [[:initialize-db]
-                                        [:load-accounts]
-                                        [:listen-to-network-status]
-                                        [:navigate-to :accounts]]
-                                       (when sharing-usage-data?
-                                         [[:unregister-mixpanel-tracking]]))
-       :transport/stop-whisper cofx})))
+      (handlers/merge-fx cofx
+                         {:dispatch-n (concat [[:initialize-db]
+                                               [:load-accounts]
+                                               [:listen-to-network-status]
+                                               [:navigate-to :accounts]]
+                                              (when sharing-usage-data?
+                                                [[:unregister-mixpanel-tracking]]))}
+                         (transport/stop-whisper)))))
 
 (handlers/register-handler-fx
   :initialize-db
@@ -290,7 +291,7 @@
 (handlers/register-handler-fx
   :initialize-account
   (fn [_ [_ address events-after]]
-    {:dispatch-n (cond-> [[:initialize-account-db address] 
+    {:dispatch-n (cond-> [[:initialize-account-db address]
                           [:initialize-protocol address]
                           [:initialize-sync-listener]
                           [:initialize-chats]

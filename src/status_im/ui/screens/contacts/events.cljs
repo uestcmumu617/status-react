@@ -16,7 +16,7 @@
             [status-im.chat.models :as chat.models]
             [status-im.commands.events.loading :as loading-events]
             [status-im.transport.message.core :as transport]
-            [status-im.transport.message.v1.contact :as transport-contact]
+            [status-im.transport.message.v1.contact :as message.v1.contact]
             [status-im.ui.screens.add-new.new-chat.db :as new-chat.db]))
 ;;;; COFX
 
@@ -156,8 +156,8 @@
 (defn send-contact-request [{:keys [whisper-identity pending? dapp?] :as contact} {:keys [db] :as cofx}]
   (when-not dapp?
     (if pending?
-      (transport/send (transport-contact/map->ContactRequestConfirmed (own-info db)) whisper-identity cofx)
-      (transport/send (transport-contact/map->ContactRequest (own-info db)) whisper-identity cofx))))
+      (transport/send (message.v1.contact/map->ContactRequestConfirmed (own-info db)) whisper-identity cofx)
+      (transport/send (message.v1.contact/map->ContactRequest (own-info db)) whisper-identity cofx))))
 
 (defn- build-contact [whisper-id {{:keys [chats] :contacts/keys [contacts]} :db}]
   (-> (if-let [contact-info (get-in chats [whisper-id :contact-info])]
@@ -195,16 +195,6 @@
         (handlers/merge-fx cofx
                            fx
                            (add-contact-and-open-chat contact-identity))))))
-
-#_(handlers/register-handler-fx
-    :contact-online-received
-    (fn [{:keys [db] :as cofx} [_ {:keys                          [from]
-                                   {{:keys [timestamp]} :content} :payload}]]
-      (let [prev-last-online (get-in db [:contacts/contacts from :last-online])]
-        (when (and timestamp (< prev-last-online timestamp))
-          (update-contact {:whisper-identity from
-                           :last-online      timestamp}
-                          cofx)))))
 
 (handlers/register-handler-fx
   :hide-contact

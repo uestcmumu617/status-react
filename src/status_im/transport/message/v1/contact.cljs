@@ -64,12 +64,11 @@
 
 (defrecord ContactUpdate [name profile-image]
   message/StatusMessage
-  (send [this chat-id cofx]
+  (send [this _ {:keys [db] :as cofx}]
     (let [message-id (transport.utils/message-id this)
           public-keys (remove nil? (map :public-key (:contacts/contacts db)))]
       (handlers/merge-fx cofx
                          (protocol/multi-send-with-pubkey {:public-keys public-keys
-                                                           :chat-id chat-id
                                                            :payload this}))))
   (receive [this chat-id signature cofx]
     (let [message-id (transport.utils/message-id this)]

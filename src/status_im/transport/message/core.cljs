@@ -1,7 +1,6 @@
 (ns status-im.transport.message.core
   (:require [re-frame.core :as re-frame] [status-im.utils.handlers :as handlers]
             [status-im.data-store.messages :as data-store.messages]
-            [status-im.ui.screens.contacts.events :as contacts.events]
             [status-im.chat.models :as chat.models]
             [status-im.constants :as constants]))
 
@@ -19,8 +18,10 @@
 ;; :online
 
 ;;TODO (yenda) this is probably not the place to have these
+;;it was placed there temporary to solve circular dependencies
 
 ;; Contacts
+
 
 (defn receive-contact-request
   [public-key
@@ -58,6 +59,12 @@
                           :save-contact contact-props}
                          (chat.models/upsert-chat chat-props)))))
 
+
+(defn- update-contact [{:keys [whisper-identity] :as contact} {:keys [db]}]
+  (when (get-in db [:contacts/contacts whisper-identity])
+    {:db           (update-in db [:contacts/contacts whisper-identity] merge contact)
+     :save-contact contact}))
+
 (defn receive-contact-update [chat-id public-key {:keys [name profile-image]} {:keys [db now] :as cofx}]
   (let [{:keys [chats current-public-key]} db]
     (when (not= current-public-key public-key)
@@ -69,10 +76,10 @@
                          :last-updated     now}]
             (if (chats public-key)
               (handlers/merge-fx cofx
-                                 (contacts.events/update-contact contact)
+                                 (update-contact contact)
                                  (chat.models/update-chat {:chat-id chat-id
                                                            :name    name}))
-              (contacts.events/update-contact contact cofx))))))))
+              (update-contact contact cofx))))))))
 
 ;; Seen messages
 (defn receive-seen

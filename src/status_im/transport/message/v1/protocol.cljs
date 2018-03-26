@@ -50,16 +50,21 @@
                                  :topic   (transport.utils/get-topic constants/contact-discovery)}
                                 whisper-opts)}}))
 
-(defn multi-send-with-pubkey [{:keys [payload chat-id public-keys success-event]} {:keys [db] :as cofx}]
+(defn prepare-recipients [public-keys db]
+  (map (fn [public-key]
+         {:public-key public-key
+          :topic      (get-in db [:transport/chats public-key :topic])})
+       public-keys))
+
+(defn multi-send-with-pubkey [{:keys [payload public-keys success-event]} {:keys [db] :as cofx}]
   (let [{:keys [current-public-key web3]} db
-        {:keys [topic]} (get-in db [:transport/chats chat-id])]
-    {:shh/multi-post {:web3 web3
+        recipients                        (prepare-recipients public-keys db)]
+    {:shh/multi-post {:web3          web3
                       :success-event success-event
-                      :public-keys public-keys
-                      :message (merge {:sig     current-public-key
-                                       :payload payload
-                                       :topic   (transport.utils/get-topic constants/contact-discovery)}
-                                      whisper-opts)}}))
+                      :recipients    recipients
+                      :message       (merge {:sig     current-public-key
+                                             :payload payload}
+                                            whisper-opts)}}))
 
 (defrecord Ack [message-ids]
   message/StatusMessage

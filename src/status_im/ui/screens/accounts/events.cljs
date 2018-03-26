@@ -13,7 +13,10 @@
             [status-im.utils.gfycat.core :refer [generate-gfy]]
             [status-im.utils.hex :as utils.hex]
             [status-im.constants :as constants]
-            status-im.ui.screens.accounts.create.navigation))
+            [status-im.transport.message.v1.contact :as message.contact]
+            [status-im.transport.message.core :as transport]
+            status-im.ui.screens.accounts.create.navigation
+            [status-im.chat.models :as chat.models]))
 
 ;;;; COFX
 
@@ -36,33 +39,6 @@
      password
      #(re-frame/dispatch [::account-created (json->clj %) password]))))
 
-(re-frame/reg-fx
-  ::broadcast-account-update
-  (fn [{:keys [current-public-key web3 name photo-path status
-               updates-public-key updates-private-key]}]
-    #_(when web3
-        (protocol/broadcast-profile!
-         {:web3    web3
-          :message {:from       current-public-key
-                    :message-id (random/id)
-                    :keypair    {:public  updates-public-key
-                                 :private updates-private-key}
-                    :payload    {:profile {:name          name
-                                           :status        status
-                                           :profile-image photo-path}}}}))))
-
-(re-frame/reg-fx
-  ::send-keys-update
-  (fn [{:keys [web3 current-public-key contacts
-               updates-public-key updates-private-key]}]
-    #_(doseq [id (handlers/identities contacts)]
-        (protocol/update-keys!
-         {:web3    web3
-          :message {:from       current-public-key
-                    :to         id
-                    :message-id (random/id)
-                    :payload    {:keypair {:public  updates-public-key
-                                           :private updates-private-key}}}}))))
 ;;;; Handlers
 
 (handlers/register-handler-fx
@@ -140,33 +116,33 @@
 
 (defn account-update
   "Takes effects (containing :db) + new account fields, adds all effects necessary for account update."
-  [{{:accounts/keys [accounts current-account-id] :as db} :db :as fx} new-account-fields]
-  (let [current-account (get accounts current-account-id)
-        new-account     (merge current-account new-account-fields)]
-    (-> fx
-        (assoc-in [:db :accounts/accounts current-account-id] new-account)
-        (assoc :save-account new-account
-               ::broadcast-account-update (merge (select-keys db [:current-public-key :web3])
-                                                 (select-keys new-account [:name :photo-path :status
-                                                                           :updates-public-key :updates-private-key]))))))
+  [new-account-fields {{:accounts/keys [accounts current-account-id] :as db} :db :as cofx}]
+  (let [current-account           (get accounts current-account-id)
+        new-account               (merge current-account new-account-fields)
+        {:keys [name photo-path]} new-account]
+    (handlers/merge-fx cofx
+                       {:db (assoc-in db [:accounts/accounts current-account-id] new-account)
+                        :save-account new-account}
+                       (transport/send nil (message.contact/ContactUpdate. name photo-path)))))
 
 (handlers/register-handler-fx
   :send-account-update-if-needed
-  (fn [{{:accounts/keys [accounts current-account-id] :as db} :db now :now} _]
+  (fn [{{:accounts/keys [accounts current-account-id] :as db} :db now :now :as cofx} _]
     (let [{:keys [last-updated]} (get accounts current-account-id)
           needs-update? (> (- now last-updated) time/week)]
       (log/info "Need to send account-update: " needs-update?)
       (when needs-update?
         ;; TODO(janherich): this is very strange and misleading, need to figure out why it'd necessary to update
         ;; account with network update when last update was more then week ago
-        (account-update {:db db} nil)))))
+        (account-update nil cofx)))))
 
 (handlers/register-handler-fx
   :account-set-name
-  (fn [{{:accounts/keys [create] :as db} :db} _]
-    (-> {:db (assoc-in db [:accounts/create :show-welcome?] true)
-         :dispatch [:navigate-to-clean :usage-data]}
-        (account-update {:name (:name create)}))))
+  (fn [{{:accounts/keys [create] :as db} :db :as cofx} _]
+    (handlers/merge-fx cofx
+                       {:db (assoc-in db [:accounts/create :show-welcome?] true)
+                        :dispatch [:navigate-to-clean :usage-data]}
+                       (account-update {:name (:name create)}))))
 
 (handlers/register-handler-fx
   :account-finalized
@@ -176,8 +152,8 @@
 
 (handlers/register-handler-fx
   :update-sign-in-time
-  (fn [{db :db now :now} _]
-    (account-update {:db db} {:last-sign-in now})))
+  (fn [{db :db now :now :as cofx} _]
+    (account-update {:last-sign-in now} cofx)))
 
 (handlers/register-handler-fx
   :reset-account-creation
@@ -186,5 +162,5 @@
 
 (handlers/register-handler-fx
   :switch-dev-mode
-  (fn [{db :db} [_ dev-mode]]
-    (account-update {:db db} {:dev-mode? dev-mode})))
+  (fn [cofx [_ dev-mode]]
+    (account-update {:dev-mode? dev-mode} cofx)))

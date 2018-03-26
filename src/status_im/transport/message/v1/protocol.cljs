@@ -1,6 +1,7 @@
 (ns status-im.transport.message.v1.protocol
   (:require [status-im.utils.config :as config]
             [status-im.constants :as constants]
+            [status-im.chat.core :as chat]
             [status-im.transport.message-cache :as message-cache]
             [status-im.transport.db :as transport.db]
             [status-im.transport.core :as transport]
@@ -100,4 +101,4 @@
            :payload this}
           cofx))
   (receive [this chat-id signature cofx]
-    (message/receive-seen chat-id signature (:message-ids this) cofx)))
+    (chat/receive-seen chat-id signature (:message-ids this) cofx)))

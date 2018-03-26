@@ -4,6 +4,7 @@
             [status-im.utils.handlers :as handlers]
             [status-im.transport.message.core :as message]
             [status-im.i18n :as i18n]
+            [status-im.chat.core :as chat]
             [status-im.chat.models :as models.chat]
             [status-im.chat.models.message :as models.message]
             [status-im.transport.message.v1.protocol :as protocol]
@@ -109,8 +110,8 @@
                                                                                          added
                                                                                          removed
                                                                                          (:contacts/contacts db))))
-                                 (message/participants-added chat-id added)
-                                 (message/participants-removed chat-id removed)))))
+                                 (chat/participants-added chat-id added)
+                                 (chat/participants-removed chat-id removed)))))
         ;; first time we hear about chat -> create it if we are among participants
         (when (get (set participants) me)
           (models.chat/add-group-chat chat-id chat-name signature participants cofx))))))
@@ -130,7 +131,7 @@
                          (models.message/receive
                           (models.message/system-message chat-id message-id now
                                                          (str participant-leaving-name " " (i18n/label :t/left))))
-                         (message/participants-removed chat-id #{signature})
+                         (chat/participants-removed chat-id #{signature})
                          (send-new-group-key nil chat-id)))))
 
 (handlers/register-handler-fx

@@ -123,7 +123,7 @@
     (handlers/merge-fx cofx
                        {:db (assoc-in db [:accounts/accounts current-account-id] new-account)
                         :save-account new-account}
-                       (transport/send nil (message.contact/ContactUpdate. name photo-path)))))
+                       (transport/send (message.contact/ContactUpdate. name photo-path) nil))))
 
 (handlers/register-handler-fx
   :send-account-update-if-needed

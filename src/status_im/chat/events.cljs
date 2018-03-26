@@ -139,11 +139,10 @@
 
 (defn- persist-seen-messages
   [chat-id unseen-messages-ids {:keys [db]}]
-  (when (seq unseen-messages-ids)
-    {:update-messages (map (fn [message-id]
-                             (-> (get-in db [:chats chat-id :messages message-id])
-                                 (select-keys [:message-id :user-statuses])))
-                           unseen-messages-ids)}))
+  {:update-messages (map (fn [message-id]
+                           (-> (get-in db [:chats chat-id :messages message-id])
+                               (select-keys [:message-id :user-statuses])))
+                         unseen-messages-ids)})
 
 (defn- send-messages-seen [chat-id message-ids {:keys [db] :as cofx}]
   (when (and (seq message-ids)
@@ -174,9 +173,9 @@
                          {:db (-> (reduce (fn [new-db message-id]
                                             (assoc-in new-db (into messages-path [message-id :user-statuses me]) :seen))
                                           db
-                                          (conj unseen-messages-ids unseen-system-messages-ids))
+                                          (into unseen-messages-ids unseen-system-messages-ids))
                                   (update-in [:chats chat-id :unviewed-messages] set/difference unseen-messages-ids unseen-system-messages-ids))}
-                         (persist-seen-messages chat-id unseen-messages-ids)
+                         (persist-seen-messages chat-id (into unseen-messages-ids unseen-system-messages-ids))
                          (send-messages-seen chat-id unseen-messages-ids)))))
 
 (defn- fire-off-chat-loaded-event

@@ -187,12 +187,14 @@
 (handlers/register-handler-fx
   :set-contact-identity-from-qr
   [(re-frame/inject-cofx :random-id) (re-frame/inject-cofx :get-stored-chat)]
-  (fn [{{:accounts/keys [accounts current-account-id] :as db} :db} [_ _ contact-identity]]
+  (fn [{{:accounts/keys [accounts current-account-id] :as db} :db :as cofx} [_ _ contact-identity]]
     (let [current-account (get accounts current-account-id)
           fx              {:db (assoc db :contacts/new-identity contact-identity)}]
       (if (new-chat.db/validate-pub-key contact-identity current-account)
         fx
-        (handlers/merge-fx fx (add-contact-and-open-chat contact-identity))))))
+        (handlers/merge-fx cofx
+                           fx
+                           (add-contact-and-open-chat contact-identity))))))
 
 #_(handlers/register-handler-fx
     :contact-update-received

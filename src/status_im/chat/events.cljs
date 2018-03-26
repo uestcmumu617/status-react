@@ -7,7 +7,7 @@
             [status-im.chat.models :as models]
             [status-im.chat.console :as console]
             [status-im.chat.constants :as chat.constants]
-            [status-im.ui.components.list-selection :as list-selection] 
+            [status-im.ui.components.list-selection :as list-selection]
             [status-im.ui.screens.navigation :as navigation]
             [status-im.utils.handlers :as handlers]
             [status-im.transport.message.core :as transport]
@@ -139,33 +139,43 @@
 
 (defn- persist-seen-messages
   [chat-id unseen-messages-ids {:keys [db]}]
-  {:update-messages (map (fn [message-id]
-                           (-> (get-in db [:chats chat-id :messages message-id])
-                               (select-keys [:message-id :user-statuses])))
-                         unseen-messages-ids)})
+  (when (seq unseen-messages-ids)
+    {:update-messages (map (fn [message-id]
+                             (-> (get-in db [:chats chat-id :messages message-id])
+                                 (select-keys [:message-id :user-statuses])))
+                           unseen-messages-ids)}))
 
 (defn- send-messages-seen [chat-id message-ids {:keys [db] :as cofx}]
-  (when (not (models/bot-only-chat? db chat-id))
+  (when (and (seq message-ids)
+             (not (models/bot-only-chat? db chat-id)))
     (transport/send (protocol/map->MessagesSeen {:message-ids message-ids}) chat-id cofx)))
 
+;;TODO (yenda) find a more elegant solution for system messages
 (defn- mark-messages-seen
   [chat-id {:keys [db] :as cofx}]
-  (let [me                  (:current-public-key db)
-        messages-path       [:chats chat-id :messages]
-        unseen-messages-ids (into #{}
-                                  (comp (filter (fn [[_ {:keys [from user-statuses outgoing]}]]
-                                                  (and (not outgoing)
-                                                       (not= constants/system from)
-                                                       (not= (get user-statuses me) :seen))))
-                                        (map first))
-                                  (get-in db messages-path))]
-    (when (seq unseen-messages-ids)
+  (let [me                         (:current-public-key db)
+        messages-path              [:chats chat-id :messages]
+        unseen-messages-ids        (into #{}
+                                         (comp (filter (fn [[_ {:keys [from user-statuses outgoing]}]]
+                                                         (and (not outgoing)
+                                                              (not= constants/system from)
+                                                              (not= (get user-statuses me) :seen))))
+                                               (map first))
+                                         (get-in db messages-path))
+        unseen-system-messages-ids (into #{}
+                                         (comp (filter (fn [[_ {:keys [from user-statuses]}]]
+                                                         (and (= constants/system from)
+                                                              (not= (get user-statuses me) :seen))))
+                                               (map first))
+                                         (get-in db messages-path))]
+    (when (or (seq unseen-messages-ids)
+              (seq unseen-system-messages-ids))
       (handlers/merge-fx cofx
                          {:db (-> (reduce (fn [new-db message-id]
                                             (assoc-in new-db (into messages-path [message-id :user-statuses me]) :seen))
                                           db
-                                          unseen-messages-ids)
-                                  (update-in [:chats chat-id :unviewed-messages] set/difference unseen-messages-ids))}
+                                          (conj unseen-messages-ids unseen-system-messages-ids))
+                                  (update-in [:chats chat-id :unviewed-messages] set/difference unseen-messages-ids unseen-system-messages-ids))}
                          (persist-seen-messages chat-id unseen-messages-ids)
                          (send-messages-seen chat-id unseen-messages-ids)))))
 
@@ -275,7 +285,7 @@
     (if (get-in db [:chats topic])
       (handlers/merge-fx cofx
                          (navigation/navigate-to-clean :home)
-                         (navigate-to-chat topic {})) 
+                         (navigate-to-chat topic {}))
       (handlers/merge-fx cofx
                          (models/add-public-chat topic)
                          (navigation/navigate-to-clean :home)
@@ -299,7 +309,7 @@
                                                         (:contacts/contacts db)
                                                         (:username db)))]
       (handlers/merge-fx cofx
-                         {:db (assoc db :group/selected-contacts #{})} 
+                         {:db (assoc db :group/selected-contacts #{})}
                          (models/add-group-chat random-id chat-name (:current-public-key db) selected-contacts)
                          (navigation/navigate-to-clean :home)
                          (navigate-to-chat random-id {})

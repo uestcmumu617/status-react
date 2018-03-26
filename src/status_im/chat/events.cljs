@@ -203,7 +203,7 @@
 (defn- ensure-chat-exists
   "Takes chat-id and coeffects map and returns fx to create chat if it doesn't exist"
   [chat-id {:keys [db] :as cofx}]
-  (when-not (get-in cofx [:chats chat-id])
+  (when-not (get-in cofx [:db :chats chat-id])
     (models/add-chat chat-id cofx)))
 
 (defn- navigate-to-chat

@@ -22,6 +22,12 @@
   (rep [this {:keys [name profile-image address fcm-token]}]
     #js [name profile-image address fcm-token]))
 
+(deftype ContactUpdateHandler []
+  Object
+  (tag [this v] "c6")
+  (rep [this {:keys [name profile-image]}]
+    #js [name profile-image]))
+
 (deftype MessageHandler []
   Object
   (tag [this v] "c4")
@@ -64,6 +70,8 @@
                                      (v1.protocol/Message. content content-type message-type to-clock-value timestamp))
                               "c5" (fn [message-ids]
                                      (v1.protocol/MessagesSeen. message-ids))
+                              "c6" (fn [[name profile-image]]
+                                     (v1.contact/ContactUpdate. name profile-image))
                               "g1" (fn [[chat-id sym-key message]]
                                      (v1.group-chat/NewGroupKey. chat-id sym-key message))
                               "g2" (fn [[chat-name participants]]
@@ -76,6 +84,7 @@
                              {v1.contact/NewContactKey           (NewContactKeyHandler.)
                               v1.contact/ContactRequest          (ContactRequestHandler.)
                               v1.contact/ContactRequestConfirmed (ContactRequestConfirmedHandler.)
+                              v1.contact/ContactUpdate           (ContactUpdateHandler.)
                               v1.protocol/Message                (MessageHandler.)
                               v1.protocol/MessagesSeen           (MessagesSeenHandler.)
                               v1.group-chat/NewGroupKey          (NewGroupKeyHandler.)

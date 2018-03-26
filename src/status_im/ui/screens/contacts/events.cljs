@@ -197,27 +197,6 @@
                            (add-contact-and-open-chat contact-identity))))))
 
 #_(handlers/register-handler-fx
-    :contact-update-received
-    (fn [{:keys [db] :as cofx} [_ {:keys [from payload]}]]
-      (let [{:keys [chats current-public-key]} db]
-        (when (not= current-public-key from)
-          (let [{:keys [content timestamp]} payload
-                {:keys [status name profile-image]} (:profile content)
-                prev-last-updated (get-in db [:contacts/contacts from :last-updated])]
-            (when (<= prev-last-updated timestamp)
-              (let [contact {:whisper-identity from
-                             :name             name
-                             :photo-path       profile-image
-                             :status           status
-                             :last-updated     timestamp}]
-                (if (chats from)
-                  (handlers/merge-fx cofx
-                                     (update-contact contact)
-                                     (chat.models/update-chat {:chat-id from
-                                                               :name    name}))
-                  (update-contact contact cofx)))))))))
-
-#_(handlers/register-handler-fx
     :contact-online-received
     (fn [{:keys [db] :as cofx} [_ {:keys                          [from]
                                    {{:keys [timestamp]} :content} :payload}]]

@@ -22,11 +22,11 @@
   (when-not (message-cache/exists? message-id)
     (message-cache/add! message-id)))
 
-(defn requires-ack [message-id chat-id {:keys [db] :as cofx}]
-  {:db (update-in db [:transport/chats chat-id :pending-ack] conj message-id)})
+#_(defn requires-ack [message-id chat-id {:keys [db] :as cofx}]
+    {:db (update-in db [:transport/chats chat-id :pending-ack] conj message-id)})
 
-(defn ack [message-id chat-id {:keys [db] :as cofx}]
-  {:db (update-in db [:transport/chats chat-id :ack] conj message-id)})
+#_(defn ack [message-id chat-id {:keys [db] :as cofx}]
+    {:db (update-in db [:transport/chats chat-id :ack] conj message-id)})
 
 (defn send [{:keys [payload chat-id success-event]} {:keys [db] :as cofx}]
   ;; we assume that the chat contains the contact public-key

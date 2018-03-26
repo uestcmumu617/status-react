@@ -37,12 +37,12 @@
                                                                                                       :topic      topic
                                                                                                       :message    this}]))}}
                          (protocol/init-chat chat-id topic)
-                         (protocol/requires-ack message-id chat-id))))
+                         #_(protocol/requires-ack message-id chat-id))))
   (receive [this chat-id signature {:keys [db] :as cofx}]
     (let [message-id (transport.utils/message-id this)]
       (when (protocol/is-new? message-id)
         (handlers/merge-fx cofx
-                           (protocol/ack message-id chat-id)
+                           #_(protocol/ack message-id chat-id)
                            (message/receive-contact-request signature
                                                             this))))))
 
@@ -51,16 +51,33 @@
   (send [this chat-id cofx]
     (let [message-id (transport.utils/message-id this)]
       (handlers/merge-fx cofx
-                         (protocol/requires-ack message-id chat-id)
+                         #_(protocol/requires-ack message-id chat-id)
                          (protocol/send {:chat-id chat-id
                                          :payload this}))))
   (receive [this chat-id signature cofx]
     (let [message-id (transport.utils/message-id this)]
       (when (protocol/is-new? message-id)
         (handlers/merge-fx cofx
-                           (protocol/ack message-id chat-id)
+                           #_(protocol/ack message-id chat-id)
                            (message/receive-contact-request-confirmation signature
                                                                          this))))))
+
+(defrecord ContactUpdate [name profile-image]
+  message/StatusMessage
+  (send [this chat-id cofx]
+    (let [message-id (transport.utils/message-id this)
+          public-keys (remove nil? (map :public-key (:contacts/contacts db)))]
+      (handlers/merge-fx cofx
+                         (protocol/multi-send-with-pubkey {:public-keys public-keys
+                                                           :chat-id chat-id
+                                                           :payload this}))))
+  (receive [this chat-id signature cofx]
+    (let [message-id (transport.utils/message-id this)]
+      (when (protocol/is-new? message-id)
+        (handlers/merge-fx cofx
+                           (message/receive-contact-update chat-id
+                                                           signature
+                                                           this))))))
 
 (handlers/register-handler-fx
   ::send-new-sym-key

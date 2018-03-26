@@ -1,9 +1,9 @@
 (ns status-im.transport.message.core
   (:require [re-frame.core :as re-frame] [status-im.utils.handlers :as handlers]
             [status-im.data-store.messages :as data-store.messages]
-            [status-im.chat.models :as models.chat]
-            [status-im.constants :as constants]
-            [status-im.chat.models :as models]))
+            [status-im.ui.screens.contacts.events :as contacts.events]
+            [status-im.chat.models :as chat.models]
+            [status-im.constants :as constants]))
 
 (defprotocol StatusMessage
   "Protocol for transport layed status messages"
@@ -40,7 +40,7 @@
       (handlers/merge-fx cofx
                          {:db           (update-in db [:contacts/contacts public-key] merge contact-props)
                           :save-contact contact-props}
-                         (models.chat/add-chat public-key chat-props)))))
+                         (chat.models/add-chat public-key chat-props)))))
 
 (defn receive-contact-request-confirmation
   [public-key {:keys [name profile-image address fcm-token]}
@@ -56,7 +56,23 @@
       (handlers/merge-fx cofx
                          {:db           (update-in db [:contacts/contacts public-key] merge contact-props)
                           :save-contact contact-props}
-                         (models.chat/upsert-chat chat-props)))))
+                         (chat.models/upsert-chat chat-props)))))
+
+(defn receive-contact-update [chat-id public-key {:keys [name profile-image]} {:keys [db now] :as cofx}]
+  (let [{:keys [chats current-public-key]} db]
+    (when (not= current-public-key public-key)
+      (let [prev-last-updated (get-in db [:contacts/contacts public-key :last-updated])]
+        (when (<= prev-last-updated now)
+          (let [contact {:whisper-identity public-key
+                         :name             name
+                         :photo-path       profile-image
+                         :last-updated     now}]
+            (if (chats public-key)
+              (handlers/merge-fx cofx
+                                 (contacts.events/update-contact contact)
+                                 (chat.models/update-chat {:chat-id chat-id
+                                                           :name    name}))
+              (contacts.events/update-contact contact cofx))))))))
 
 ;; Seen messages
 (defn receive-seen
@@ -79,7 +95,7 @@
   (when (seq removed-participants-set)
     (let [{:keys [is-active timestamp]} (get-in db [:chats chat-id])]
       ;;TODO: not sure what this condition is for
-      (when (and is-active (>= now timestamp)) 
+      (when (and is-active (>= now timestamp))
         {:db (update-in db [:chats chat-id :contacts]
                         (partial remove (comp removed-participants-set :identity)))
          :data-store/remove-chat-contacts [chat-id removed-participants-set]}))))

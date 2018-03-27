@@ -12,27 +12,11 @@
 
 (nodejs/enable-util-print!)
 
-(def rpc-url "http://localhost:8645")
+(def rpc-url (aget nodejs/process.env "WNODE_ADDRESS"))
+
 (def Web3 (js/require "web3"))
 (defn make-web3 []
   (Web3. (Web3.providers.HttpProvider. rpc-url)))
-
-(defn setup []
-  (println "Setup...")
-
-  ;; NOTE(oskarth): If status-go has already been built correctly, comment this out
-  (println "Preparing environment...")
-  (node/prepare-env!)
-
-  (println "Start node...")
-  (node/start!)
-
-  (println "Setup done"))
-
-(defn teardown []
-  (println "Teardown done"))
-
-(use-fixtures :once {:before setup :after teardown})
 
 (defn make-callback [identity done]
   (fn [& args]
@@ -40,7 +24,6 @@
     (when (= (first args) :sent)
       (protocol/reset-all-pending-messages!)
       (protocol/stop-watching-all!)
-      (node/stop!)
       (done)
       (utils/exit!))))
 
@@ -63,42 +46,49 @@
             (is (= :terminate :indeterminate))
             (done)))
 
-;; TODO(oskarth): Fix this test, issue with private key not being persisted
+(defn create-keys [shh]
+  (let [keypair-promise (.newKeyPair shh)]
+    (.getPublicKey shh keypair-promise)))
+
 (deftest test-send-message!
-  (async done
-    (let [timeout       30
-          web3          (make-web3)
-          id1-keypair   (protocol/new-keypair!)
-          common-config {:web3                        web3
-                         :groups                      []
-                         :ack-not-received-s-interval 125
-                         :default-ttl                 120
-                         :send-online-s-interval      180
-                         :ttl-config                  {:public-group-message 2400}
-                         :max-attempts-number         3
-                         :delivery-loop-ms-interval   500
-                         :hashtags                    []
-                         :pending-messages            []}
-          id1-config    (id-specific-config node/identity-1 id1-keypair [] done)]
-      (ensure-test-terminates! timeout done)
-      (protocol/init-whisper! (merge common-config id1-config))
-      (protocol/send-message!
-        {:web3    web3
-         :message {:message-id "123"
-                   :from       node/identity-1
-                   :to         node/identity-2
-                   :payload    {:type         :message
-                                :content-type "text/plain"
-                                :content      "123"
-                                :timestamp    1498723691404}}}))))
+  (testing "sending messages"
+    (async done
+           (let [timeout       30
+                 web3          (make-web3)
+                 shh  (web3.utils/shh web3)
+                 id1-keypair   (protocol/new-keypair!)
+                 from          (create-keys shh)
+                 common-config {:web3                        web3
+                                :groups                      []
+                                :ack-not-received-s-interval 125
+                                :pow-target                  0.001
+                                :pow-time                    1
+                                :default-ttl                 120
+                                :send-online-s-interval      180
+                                :ttl-config                  {:public-group-message 2400}
+                                :max-attempts-number         3
+                                :delivery-loop-ms-interval   500
+                                :hashtags                    []
+                                :pending-messages            []}
+                 id1-config    (id-specific-config from id1-keypair [] done)]
+             (ensure-test-terminates! timeout done)
+             (protocol/init-whisper! (merge common-config id1-config))
+             (protocol/send-message!
+               {:web3    web3
+                :message {:message-id "123"
+                          :from       from
+                          :to         node/identity-2
+                          :payload    {:type         :message
+                                       :content-type "text/plain"
+                                       :content      "123"
+                                       :timestamp    1498723691404}}})))))
 
 (deftest test-whisper-version!
   (testing "Whisper version supported"
     (async done
-           (node/start!)
            (let [web3 (make-web3)
                  shh  (web3.utils/shh web3)]
              (.version shh
                        (fn [& args]
-                         (is (= "5.0" (second args)))
+                         (is (= "6.0" (second args)))
                          (done)))))))

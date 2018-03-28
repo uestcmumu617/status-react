@@ -377,7 +377,7 @@
 
    ;;testfairy warning
    :testfairy-title                      "Warning!"
-   :testfairy-message                    "You are using an app installed from a nightly build. For testing purposes this build includes session recording if wifi connection is used, so all your interactions with this app is saved (as video and logs) and might be used by our development team to investigate possible issues. Saved video/logs do not include your passwords. Recording is done only if the app is installed from a nightly build. Nothing is recorded if the app is installed from PlayStore or TestFlight."
+   :testfairy-message                    "You are using an app installed from a nightly build. *Do not send real ETH or SNT*. For testing purposes this build includes session recording if wifi connection is used, so all your interactions with this app is saved (as video and logs) and might be used by our development team to investigate possible issues. Saved video/logs do not include your passwords. Recording is done only if the app is installed from a nightly build. Nothing is recorded if the app is installed from PlayStore or TestFlight."
 
    ;; wallet
    :wallet                               "Wallet"
